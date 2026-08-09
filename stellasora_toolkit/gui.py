@@ -578,7 +578,11 @@ class StellaSoraApp:
 
         def work() -> None:
             try:
-                items, downloaded = update_resources(DEFAULT_MANIFEST_URL, self.output_dir / "assets")
+                items, downloaded = update_resources(
+                    DEFAULT_MANIFEST_URL,
+                    self.output_dir / "assets",
+                    progress=lambda message: self.events.put(("progress", message)),
+                )
                 self.events.put(("resources_complete", (items, downloaded)))
             except Exception as error:
                 self.events.put(("resources_error", error))
