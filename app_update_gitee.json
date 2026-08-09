@@ -1,6 +1,6 @@
 {
-  "version": "1.1.2",
-  "url": "https://gitee.com/zhen-z/stellasora_gacha/releases/download/v1.1.2/StellaSoraGachaTool.exe",
-  "sha256": "9aea32599d85961ccf9de16ccc907157497c436972f98e13e87c3acce0c8617e",
-  "notes": "修复角色资源检查完成后进度条和操作按钮未复位的问题。"
+  "version": "1.1.4",
+  "url": "https://gitee.com/zhen-z/stellasora_gacha/releases/download/v1.1.4/StellaSoraGachaTool.exe",
+  "sha256": "602b4e9d1e8306f5bb8cb8aba9025ee8354097c1578747fb233b6c3312dacbde",
+  "notes": "新增安装版并更新应用图标；修复在线更新后残留临时文件的问题。"
 }

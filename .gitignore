@@ -5,6 +5,7 @@ __pycache__/
 exports/
 build/
 dist/
+release/
 *.spec
 *.exe
 .gitee-token

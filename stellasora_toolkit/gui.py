@@ -78,6 +78,7 @@ class StellaSoraApp:
         self.update_checking = False
 
         self.root.title("星塔旅人数据工具")
+        self._set_window_icon()
         self.root.geometry("1180x760")
         self.root.minsize(940, 620)
         self.root.configure(bg=BG)
@@ -87,6 +88,17 @@ class StellaSoraApp:
         self._load_latest()
         if getattr(sys, "frozen", False):
             self.root.after(1600, lambda: self.check_app_update(silent=True))
+
+    def _set_window_icon(self) -> None:
+        resource_root = Path(getattr(sys, "_MEIPASS", Path(__file__).resolve().parent.parent))
+        icon_path = resource_root / "assets" / "app_icon.png"
+        if not icon_path.exists():
+            return
+        try:
+            self.app_icon = tk.PhotoImage(file=str(icon_path))
+            self.root.iconphoto(True, self.app_icon)
+        except tk.TclError:
+            pass
 
     def _configure_styles(self) -> None:
         style = ttk.Style(self.root)
