@@ -594,5 +594,7 @@
       "path": "discs/214056.png",
       "sha256": "c177e8545a8fe8649a3a0e67722a3d2c9a2c8b1bd052a73895660de52c254fec"
     }
-  ]
+  ],
+  "archive_url": "https://raw.githubusercontent.com/zhenkotone/stellasora_gacha/main/resources.zip",
+  "archive_sha256": "3a3138c715e73b5c8cda4502202d196d592f6e4d8d77f448dc7d70bf9d31a593"
 }

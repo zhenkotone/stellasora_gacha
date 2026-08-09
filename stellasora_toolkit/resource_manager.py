@@ -1,9 +1,12 @@
 from __future__ import annotations
 
 import hashlib
+import io
 import json
 import os
 import tempfile
+import time
+import zipfile
 from pathlib import Path
 from urllib.parse import urljoin, urlparse
 from urllib.request import Request, urlopen
@@ -16,8 +19,16 @@ DEFAULT_MANIFEST_URL = (
 
 def _read_url(url: str) -> bytes:
     request = Request(url, headers={"User-Agent": "StellaSoraToolkit/1.0"})
-    with urlopen(request, timeout=20) as response:
-        return response.read()
+    last_error: OSError | None = None
+    for attempt in range(3):
+        try:
+            with urlopen(request, timeout=45) as response:
+                return response.read()
+        except OSError as error:
+            last_error = error
+            if attempt < 2:
+                time.sleep(attempt + 1)
+    raise OSError(f"resource download failed: {url}") from last_error
 
 
 def _safe_asset_path(root: Path, relative_path: str) -> Path:
@@ -40,6 +51,14 @@ def update_resources(manifest_url: str, asset_root: Path) -> tuple[list[dict], i
 
     downloaded = 0
     asset_root.mkdir(parents=True, exist_ok=True)
+    archive_url = manifest.get("archive_url")
+    archive_data: zipfile.ZipFile | None = None
+    if archive_url:
+        payload = _read_url(str(archive_url))
+        expected_archive_hash = str(manifest.get("archive_sha256", "")).lower()
+        if expected_archive_hash and hashlib.sha256(payload).hexdigest().lower() != expected_archive_hash:
+            raise ValueError("resource archive checksum mismatch")
+        archive_data = zipfile.ZipFile(io.BytesIO(payload))
     for item in manifest["items"]:
         if not isinstance(item, dict):
             continue
@@ -50,7 +69,7 @@ def update_resources(manifest_url: str, asset_root: Path) -> tuple[list[dict], i
             digest = hashlib.sha256(target.read_bytes()).hexdigest()
             if digest == expected_hash:
                 continue
-        payload = _read_url(urljoin(base_url, relative_path))
+        payload = archive_data.read(relative_path) if archive_data else _read_url(urljoin(base_url, relative_path))
         if expected_hash and hashlib.sha256(payload).hexdigest().lower() != expected_hash:
             raise ValueError(f"resource checksum mismatch: {relative_path}")
         target.parent.mkdir(parents=True, exist_ok=True)
