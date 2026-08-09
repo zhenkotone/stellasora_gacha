@@ -13,7 +13,7 @@ from urllib.request import Request, urlopen
 
 
 DEFAULT_MANIFEST_URL = (
-    "https://raw.githubusercontent.com/zhenkotone/stellasora_gacha/main/resource_manifest.json"
+    "https://gitee.com/zhen-z/stellasora_gacha/raw/master/resource_manifest.json"
 )
 
 
