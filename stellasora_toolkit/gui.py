@@ -48,7 +48,7 @@ ACCENT_DARK = "#476d8b"
 WARM = "#c58b68"
 HEADER = "#607d98"
 POOL_COLORS = ("#7776aa", "#4d9ba0", "#5d82a9", "#8e6d9c")
-APP_VERSION = "1.1.3"
+APP_VERSION = "1.1.4"
 GACHA_CATEGORY_ORDER = (
     CATEGORY_TRAVELER_LIMITED,
     CATEGORY_DISC_LIMITED,
@@ -67,6 +67,7 @@ class StellaSoraApp:
     def __init__(self, root: tk.Tk, output_dir: Path):
         self.root = root
         self.output_dir = output_dir
+        self._cleanup_stale_update_files()
         self.snapshot: Snapshot | None = None
         self.events: queue.Queue[tuple[str, Any]] = queue.Queue()
         self.gacha_rows: dict[str, dict] = {}
@@ -109,6 +110,16 @@ class StellaSoraApp:
         style.map("Treeview", background=[("selected", "#dceaf4")], foreground=[("selected", INK)])
         style.configure("Horizontal.TProgressbar", troughcolor="#d7e2eb", background=ACCENT, borderwidth=0)
         style.configure("Layout.TRadiobutton", background=PANEL, foreground=INK, font=("Microsoft YaHei UI", 9), padding=(5, 0))
+
+    @staticmethod
+    def _cleanup_stale_update_files() -> None:
+        if not getattr(sys, "frozen", False):
+            return
+        for path in Path(sys.executable).resolve().parent.glob("stellasora-update-*.exe"):
+            try:
+                path.unlink()
+            except OSError:
+                pass
 
     def _build_ui(self) -> None:
         self.root.rowconfigure(0, weight=1)
