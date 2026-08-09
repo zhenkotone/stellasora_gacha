@@ -15,7 +15,7 @@ from typing import Any
 
 from PIL import Image, ImageDraw, ImageOps, ImageTk
 
-from .app_updater import UPDATE_MANIFEST_URL, AppUpdate, check_for_update, download_update
+from .app_updater import UPDATE_MANIFEST_URL, AppUpdate, check_for_update, download_update, sha256_file
 from .catalog import (
     format_random_attr,
     gacha_item_name,
@@ -48,7 +48,7 @@ ACCENT_DARK = "#476d8b"
 WARM = "#c58b68"
 HEADER = "#607d98"
 POOL_COLORS = ("#7776aa", "#4d9ba0", "#5d82a9", "#8e6d9c")
-APP_VERSION = "1.1.5"
+APP_VERSION = "1.1.6"
 GACHA_CATEGORY_ORDER = (
     CATEGORY_TRAVELER_LIMITED,
     CATEGORY_DISC_LIMITED,
@@ -685,17 +685,24 @@ class StellaSoraApp:
 
     def _install_app_update(self, downloaded_path: Path) -> None:
         target = Path(sys.executable).resolve()
+        expected_hash = sha256_file(downloaded_path)
         quote = lambda value: "'" + str(value).replace("'", "''") + "'"
         command = (
             f"$process = Get-Process -Id {os.getpid()} -ErrorAction SilentlyContinue; "
             f"if ($process) {{ Wait-Process -Id {os.getpid()} -ErrorAction SilentlyContinue }}; "
-            "Start-Sleep -Seconds 2; "
+            "Start-Sleep -Seconds 3; "
             "$installed = $false; "
             "for ($attempt = 0; $attempt -lt 20; $attempt++) { "
             f"try {{ Copy-Item -LiteralPath {quote(downloaded_path)} -Destination {quote(target)} -Force -ErrorAction Stop; "
+            f"if ((Get-FileHash -LiteralPath {quote(target)} -Algorithm SHA256).Hash.ToLower() -ne '{expected_hash}') {{ throw 'update checksum verification failed' }}; "
             f"Remove-Item -LiteralPath {quote(downloaded_path)} -Force; $installed = $true; break }} "
             "catch { Start-Sleep -Seconds 1 } }; "
-            f"if ($installed) {{ Start-Process -FilePath {quote(target)} -WorkingDirectory {quote(target.parent)} }}"
+            "if ($installed) { "
+            "$runtime = Join-Path $env:LOCALAPPDATA 'StellaSoraGachaTool\\runtime'; "
+            "New-Item -ItemType Directory -Path $runtime -Force | Out-Null; "
+            "$env:TEMP = $runtime; $env:TMP = $runtime; "
+            f"Start-Process -FilePath {quote(target)} -WorkingDirectory {quote(target.parent)} "
+            "}"
         )
         subprocess.Popen(
             ["powershell.exe", "-NoProfile", "-WindowStyle", "Hidden", "-Command", command],

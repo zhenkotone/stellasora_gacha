@@ -1,6 +1,6 @@
 {
-  "version": "1.1.5",
-  "url": "https://gitee.com/zhen-z/stellasora_gacha/releases/download/v1.1.5/StellaSoraGachaTool.exe",
-  "sha256": "78ceb4373fc313501f5e12f993e58409a221525bb3a14bd2586823138df9c040",
-  "notes": "点击刷新游戏数据时，非管理员权限会提示可能无法读取游戏进程。"
+  "version": "1.1.6",
+  "url": "https://gitee.com/zhen-z/stellasora_gacha/releases/download/v1.1.6/StellaSoraGachaTool.exe",
+  "sha256": "43f89ce022c2f02e9a647752d4829750056294a0d2994aedba494abec98f038f",
+  "notes": "修复在线更新后偶发的 Python DLL 临时目录加载失败。"
 }

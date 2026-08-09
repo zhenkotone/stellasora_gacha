@@ -28,6 +28,14 @@ class AppUpdate:
     notes: str
 
 
+def sha256_file(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as source:
+        while chunk := source.read(1024 * 1024):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
 def _version_tuple(value: str) -> tuple[int, ...]:
     parts = value.strip().lower().removeprefix("v").split(".")
     if not parts or any(not part.isdigit() for part in parts):

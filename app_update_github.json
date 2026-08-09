@@ -1,6 +1,6 @@
 {
-  "version": "1.1.5",
-  "url": "https://github.com/zhenkotone/stellasora_gacha/releases/download/v1.1.5/StellaSoraGachaTool.exe",
-  "sha256": "18886d5ff5bf7407093cbe3203977ae9682965f2d821b958e4ee093ad4b04bd1",
-  "notes": "点击刷新游戏数据时，非管理员权限会提示可能无法读取游戏进程。"
+  "version": "1.1.6",
+  "url": "https://github.com/zhenkotone/stellasora_gacha/releases/download/v1.1.6/StellaSoraGachaTool.exe",
+  "sha256": "aded44d435e1d5605f0aa17806ad4fab57104e008c933944860d657f164cc727",
+  "notes": "修复在线更新后偶发的 Python DLL 临时目录加载失败。"
 }
