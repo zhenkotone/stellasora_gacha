@@ -11,7 +11,12 @@ from urllib.parse import urlparse
 from urllib.request import Request, urlopen
 
 
-UPDATE_MANIFEST_URL = "https://gitee.com/zhen-z/stellasora_gacha/raw/master/app_update.json"
+UPDATE_SOURCE = os.environ.get("STELLASORA_UPDATE_SOURCE", "gitee").lower()
+UPDATE_MANIFEST_URLS = {
+    "github": "https://raw.githubusercontent.com/zhenkotone/stellasora_gacha/main/app_update_github.json",
+    "gitee": "https://gitee.com/zhen-z/stellasora_gacha/raw/master/app_update_gitee.json",
+}
+UPDATE_MANIFEST_URL = UPDATE_MANIFEST_URLS.get(UPDATE_SOURCE, UPDATE_MANIFEST_URLS["gitee"])
 ProgressCallback = Callable[[str], None]
 
 
