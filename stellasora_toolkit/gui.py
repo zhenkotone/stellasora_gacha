@@ -15,6 +15,7 @@ from typing import Any
 
 from PIL import Image, ImageDraw, ImageOps, ImageTk
 
+from .app_updater import UPDATE_MANIFEST_URL, AppUpdate, check_for_update, download_update
 from .catalog import (
     format_random_attr,
     gacha_item_name,
@@ -47,6 +48,7 @@ ACCENT_DARK = "#476d8b"
 WARM = "#c58b68"
 HEADER = "#607d98"
 POOL_COLORS = ("#7776aa", "#4d9ba0", "#5d82a9", "#8e6d9c")
+APP_VERSION = "1.1.0"
 GACHA_CATEGORY_ORDER = (
     CATEGORY_TRAVELER_LIMITED,
     CATEGORY_DISC_LIMITED,
@@ -72,6 +74,7 @@ class StellaSoraApp:
         self.avatar_images: list[ImageTk.PhotoImage] = []
         self.pool_columns = tk.IntVar(value=self._load_pool_columns())
         self.busy = False
+        self.update_checking = False
 
         self.root.title("星塔旅人数据工具")
         self.root.geometry("1180x760")
@@ -81,6 +84,8 @@ class StellaSoraApp:
         self._build_ui()
         self.root.after(100, self._poll_events)
         self._load_latest()
+        if getattr(sys, "frozen", False):
+            self.root.after(1600, lambda: self.check_app_update(silent=True))
 
     def _configure_styles(self) -> None:
         style = ttk.Style(self.root)
@@ -139,6 +144,8 @@ class StellaSoraApp:
         self.open_button.pack(side="left", padx=(0, 8))
         self.resource_button = ttk.Button(actions, text="更新角色资源", command=self.update_resources)
         self.resource_button.pack(side="left", padx=(0, 8))
+        self.update_button = ttk.Button(actions, text="检查更新", command=self.check_app_update)
+        self.update_button.pack(side="left", padx=(0, 8))
         self.refresh_button = ttk.Button(actions, text="刷新游戏数据", style="Accent.TButton", command=self.refresh)
         self.refresh_button.pack(side="left")
 
@@ -589,6 +596,64 @@ class StellaSoraApp:
 
         threading.Thread(target=work, name="stellasora-resources", daemon=True).start()
 
+    def check_app_update(self, silent: bool = False) -> None:
+        if self.busy or self.update_checking:
+            return
+        if not getattr(sys, "frozen", False):
+            if not silent:
+                messagebox.showinfo("检查更新", "源码运行模式不会自动替换程序，请使用打包后的 exe。", parent=self.root)
+            return
+        self.update_checking = True
+        self.update_button.state(["disabled"])
+        if not silent:
+            self.status_var.set("正在检查软件更新")
+
+        def work() -> None:
+            try:
+                update = check_for_update(UPDATE_MANIFEST_URL, APP_VERSION)
+                self.events.put(("app_update_result", (update, silent)))
+            except Exception as error:
+                self.events.put(("app_update_error", (error, silent)))
+
+        threading.Thread(target=work, name="stellasora-update-check", daemon=True).start()
+
+    def _download_app_update(self, update: AppUpdate) -> None:
+        self.busy = True
+        self.refresh_button.state(["disabled"])
+        self.resource_button.state(["disabled"])
+        self.update_button.state(["disabled"])
+        self.progress.grid()
+        self.progress.start(12)
+        self.status_var.set(f"正在下载软件更新 {update.version}")
+
+        def work() -> None:
+            try:
+                path = download_update(
+                    update,
+                    Path(sys.executable).resolve().parent,
+                    progress=lambda message: self.events.put(("progress", message)),
+                )
+                self.events.put(("app_update_downloaded", (update, path)))
+            except Exception as error:
+                self.events.put(("app_update_download_error", error))
+
+        threading.Thread(target=work, name="stellasora-update-download", daemon=True).start()
+
+    def _install_app_update(self, downloaded_path: Path) -> None:
+        target = Path(sys.executable).resolve()
+        quote = lambda value: "'" + str(value).replace("'", "''") + "'"
+        command = (
+            f"$process = Get-Process -Id {os.getpid()} -ErrorAction SilentlyContinue; "
+            "if ($process) { $process | Wait-Process }; "
+            f"Move-Item -LiteralPath {quote(downloaded_path)} -Destination {quote(target)} -Force; "
+            f"Start-Process -FilePath {quote(target)} -WorkingDirectory {quote(target.parent)}"
+        )
+        subprocess.Popen(
+            ["powershell.exe", "-NoProfile", "-WindowStyle", "Hidden", "-Command", command],
+            creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
+        )
+        self.root.destroy()
+
     def _poll_events(self) -> None:
         try:
             while True:
@@ -623,6 +688,41 @@ class StellaSoraApp:
                     self._finish_busy()
                     self.status_var.set("角色资源更新失败")
                     messagebox.showerror("资源更新失败", str(payload), parent=self.root)
+                elif event == "app_update_result":
+                    update, silent = payload
+                    self.update_checking = False
+                    self.update_button.state(["!disabled"])
+                    if update is None:
+                        if not silent:
+                            self.status_var.set(f"当前已是最新版 {APP_VERSION}")
+                            messagebox.showinfo("检查更新", f"当前已是最新版 {APP_VERSION}。", parent=self.root)
+                    else:
+                        notes = f"\n\n{update.notes}" if update.notes else ""
+                        if messagebox.askyesno(
+                            "发现软件更新",
+                            f"发现新版本 {update.version}，是否立即下载并安装？{notes}",
+                            parent=self.root,
+                        ):
+                            self._download_app_update(update)
+                elif event == "app_update_error":
+                    error, silent = payload
+                    self.update_checking = False
+                    self.update_button.state(["!disabled"])
+                    if not silent:
+                        self.status_var.set("软件更新检查失败")
+                        messagebox.showerror("检查更新失败", str(error), parent=self.root)
+                elif event == "app_update_downloaded":
+                    update, path = payload
+                    self._finish_busy()
+                    self.update_button.state(["!disabled"])
+                    self.status_var.set(f"软件更新 {update.version} 下载完成")
+                    messagebox.showinfo("更新就绪", "软件将关闭、安装更新并自动重新启动。", parent=self.root)
+                    self._install_app_update(path)
+                elif event == "app_update_download_error":
+                    self._finish_busy()
+                    self.update_button.state(["!disabled"])
+                    self.status_var.set("软件下载失败")
+                    messagebox.showerror("软件下载失败", str(payload), parent=self.root)
         except queue.Empty:
             pass
         self.root.after(100, self._poll_events)
