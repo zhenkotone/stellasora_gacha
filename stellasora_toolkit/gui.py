@@ -48,7 +48,7 @@ ACCENT_DARK = "#476d8b"
 WARM = "#c58b68"
 HEADER = "#607d98"
 POOL_COLORS = ("#7776aa", "#4d9ba0", "#5d82a9", "#8e6d9c")
-APP_VERSION = "1.1.4"
+APP_VERSION = "1.1.5"
 GACHA_CATEGORY_ORDER = (
     CATEGORY_TRAVELER_LIMITED,
     CATEGORY_DISC_LIMITED,
@@ -61,6 +61,17 @@ GACHA_CATEGORY_NAMES = {
     CATEGORY_TRAVELER_STANDARD: "旅人常驻招募",
     CATEGORY_DISC_STANDARD: "秘纹常驻招募",
 }
+
+
+def is_running_as_administrator() -> bool:
+    if os.name != "nt":
+        return True
+    try:
+        import ctypes
+
+        return bool(ctypes.windll.shell32.IsUserAnAdmin())
+    except (AttributeError, OSError):
+        return False
 
 
 class StellaSoraApp:
@@ -99,6 +110,14 @@ class StellaSoraApp:
             self.root.iconphoto(True, self.app_icon)
         except tk.TclError:
             pass
+
+    def _show_admin_warning(self) -> None:
+        messagebox.showwarning(
+            "建议以管理员身份运行",
+            "当前软件未以管理员身份运行，可能无法读取星塔旅人游戏进程。\n\n"
+            "请退出软件后，右键点击程序并选择“以管理员身份运行”。",
+            parent=self.root,
+        )
 
     def _configure_styles(self) -> None:
         style = ttk.Style(self.root)
@@ -578,6 +597,8 @@ class StellaSoraApp:
     def refresh(self) -> None:
         if self.busy:
             return
+        if not is_running_as_administrator():
+            self._show_admin_warning()
         self.busy = True
         self.refresh_button.state(["disabled"])
         self.progress.grid()

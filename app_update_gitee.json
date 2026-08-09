@@ -1,6 +1,6 @@
 {
-  "version": "1.1.4",
-  "url": "https://gitee.com/zhen-z/stellasora_gacha/releases/download/v1.1.4/StellaSoraGachaTool.exe",
-  "sha256": "602b4e9d1e8306f5bb8cb8aba9025ee8354097c1578747fb233b6c3312dacbde",
-  "notes": "新增安装版并更新应用图标；修复在线更新后残留临时文件的问题。"
+  "version": "1.1.5",
+  "url": "https://gitee.com/zhen-z/stellasora_gacha/releases/download/v1.1.5/StellaSoraGachaTool.exe",
+  "sha256": "78ceb4373fc313501f5e12f993e58409a221525bb3a14bd2586823138df9c040",
+  "notes": "点击刷新游戏数据时，非管理员权限会提示可能无法读取游戏进程。"
 }
