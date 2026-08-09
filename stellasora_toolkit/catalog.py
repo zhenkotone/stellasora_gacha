@@ -112,7 +112,7 @@ def register_gacha_resource(item_id: int, kind: str, name: str, rarity: int = 5)
     elif kind == "disc":
         DISC_NAMES[item_id] = name
         if rarity >= 5:
-            FIVE_STAR_DISCS.add(item_id)
+            FIVE_STAR_DISCS[item_id] = name
     if rarity >= 5:
         FIVE_STAR_ITEMS.add(item_id)
 

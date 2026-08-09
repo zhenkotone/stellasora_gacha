@@ -1,6 +1,14 @@
 import unittest
 
-from stellasora_toolkit.catalog import format_attr_value, gacha_item_name, traveler_name
+from stellasora_toolkit.catalog import (
+    DISC_NAMES,
+    FIVE_STAR_DISCS,
+    FIVE_STAR_ITEMS,
+    format_attr_value,
+    gacha_item_name,
+    register_gacha_resource,
+    traveler_name,
+)
 
 
 class CatalogTests(unittest.TestCase):
@@ -14,6 +22,18 @@ class CatalogTests(unittest.TestCase):
     def test_disc_ids_resolve_to_catalog_names(self):
         self.assertEqual(gacha_item_name(211002), "和煦")
         self.assertEqual(gacha_item_name(213026), "清扫时间DA♥YO")
+
+    def test_registers_downloaded_five_star_disc(self):
+        item_id = 299999
+        try:
+            register_gacha_resource(item_id, "disc", "测试秘纹")
+            self.assertEqual(DISC_NAMES[item_id], "测试秘纹")
+            self.assertEqual(FIVE_STAR_DISCS[item_id], "测试秘纹")
+            self.assertIn(item_id, FIVE_STAR_ITEMS)
+        finally:
+            DISC_NAMES.pop(item_id, None)
+            FIVE_STAR_DISCS.pop(item_id, None)
+            FIVE_STAR_ITEMS.discard(item_id)
 
     def test_small_float_is_formatted_as_percent(self):
         self.assertEqual(format_attr_value(0.063), "6.3%")
