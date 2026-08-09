@@ -1,6 +1,6 @@
 {
-  "version": "1.1.1",
-  "url": "https://github.com/zhenkotone/stellasora_gacha/releases/download/v1.1.1/StellaSoraGachaTool.exe",
-  "sha256": "e5f078a220c2f8183d9ed732e5a86029b7c1b93d0a84d51ae90ad7765983d29b",
-  "notes": "双渠道更新：GitHub 发行版使用 GitHub 软件和角色资源源。"
+  "version": "1.1.2",
+  "url": "https://github.com/zhenkotone/stellasora_gacha/releases/download/v1.1.2/StellaSoraGachaTool.exe",
+  "sha256": "88e0fd765959ce1ed464ccefee164345b1be579715f7ab51bd2c87903b2fd4b2",
+  "notes": "修复角色资源检查完成后进度条和操作按钮未复位的问题。"
 }
