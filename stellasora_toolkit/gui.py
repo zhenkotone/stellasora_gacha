@@ -48,7 +48,7 @@ ACCENT_DARK = "#476d8b"
 WARM = "#c58b68"
 HEADER = "#607d98"
 POOL_COLORS = ("#7776aa", "#4d9ba0", "#5d82a9", "#8e6d9c")
-APP_VERSION = "1.1.2"
+APP_VERSION = "1.1.3"
 GACHA_CATEGORY_ORDER = (
     CATEGORY_TRAVELER_LIMITED,
     CATEGORY_DISC_LIMITED,
@@ -644,9 +644,14 @@ class StellaSoraApp:
         quote = lambda value: "'" + str(value).replace("'", "''") + "'"
         command = (
             f"$process = Get-Process -Id {os.getpid()} -ErrorAction SilentlyContinue; "
-            "if ($process) { $process | Wait-Process }; "
-            f"Move-Item -LiteralPath {quote(downloaded_path)} -Destination {quote(target)} -Force; "
-            f"Start-Process -FilePath {quote(target)} -WorkingDirectory {quote(target.parent)}"
+            f"if ($process) {{ Wait-Process -Id {os.getpid()} -ErrorAction SilentlyContinue }}; "
+            "Start-Sleep -Seconds 2; "
+            "$installed = $false; "
+            "for ($attempt = 0; $attempt -lt 20; $attempt++) { "
+            f"try {{ Copy-Item -LiteralPath {quote(downloaded_path)} -Destination {quote(target)} -Force -ErrorAction Stop; "
+            f"Remove-Item -LiteralPath {quote(downloaded_path)} -Force; $installed = $true; break }} "
+            "catch { Start-Sleep -Seconds 1 } }; "
+            f"if ($installed) {{ Start-Process -FilePath {quote(target)} -WorkingDirectory {quote(target.parent)} }}"
         )
         subprocess.Popen(
             ["powershell.exe", "-NoProfile", "-WindowStyle", "Hidden", "-Command", command],
