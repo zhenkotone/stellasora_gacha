@@ -50,7 +50,8 @@ ACCENT_DARK = "#476d8b"
 WARM = "#c58b68"
 HEADER = "#607d98"
 POOL_COLORS = ("#7776aa", "#4d9ba0", "#5d82a9", "#8e6d9c")
-APP_VERSION = "1.2.5"
+FIVE_STAR_AVATAR_SIZE = 70
+APP_VERSION = "1.2.6"
 GACHA_CATEGORY_ORDER = (
     CATEGORY_TRAVELER_LIMITED,
     CATEGORY_DISC_LIMITED,
@@ -143,6 +144,7 @@ class StellaSoraApp:
         style.map("Treeview", background=[("selected", "#dceaf4")], foreground=[("selected", INK)])
         style.configure("Horizontal.TProgressbar", troughcolor="#d7e2eb", background=ACCENT, borderwidth=0)
         style.configure("Layout.TRadiobutton", background=PANEL, foreground=INK, font=("Microsoft YaHei UI", 9), padding=(5, 0))
+        style.configure("FiveStarLayout.TRadiobutton", background=PANEL, foreground=INK, font=("Microsoft YaHei UI", 7), padding=(4, 0))
 
     @staticmethod
     def _cleanup_stale_update_files() -> None:
@@ -317,20 +319,21 @@ class StellaSoraApp:
         )
         loaded_count = sum(category in semantic_categories for category in GACHA_CATEGORY_ORDER)
 
-        intro = ttk.Frame(self.stats_content, style="Panel.TFrame", padding=(18, 14))
+        intro = ttk.Frame(self.stats_content, style="Panel.TFrame", padding=(14, 11))
         intro.pack(fill="x", padx=12, pady=(12, 8))
         ttk.Label(
             intro,
             text=f"五星记录  {total_five}",
             background=PANEL,
             foreground=INK,
-            font=("Microsoft YaHei UI", 14, "bold"),
+            font=("Microsoft YaHei UI", 11, "bold"),
         ).pack(side="left")
         ttk.Label(
             intro,
             text=f"已加载分类 {loaded_count}/4 · 间隔抽数按同一卡池独立计算",
             background=PANEL,
             foreground=MUTED,
+            font=("Microsoft YaHei UI", 7),
         ).pack(side="right", padx=(16, 0))
         layout_switch = ttk.Frame(intro, style="Panel.TFrame")
         layout_switch.pack(side="right")
@@ -340,7 +343,7 @@ class StellaSoraApp:
             variable=self.pool_columns,
             value=2,
             command=self._refresh_pool_layout,
-            style="Layout.TRadiobutton",
+            style="FiveStarLayout.TRadiobutton",
         ).pack(side="left")
         ttk.Radiobutton(
             layout_switch,
@@ -348,7 +351,7 @@ class StellaSoraApp:
             variable=self.pool_columns,
             value=1,
             command=self._refresh_pool_layout,
-            style="Layout.TRadiobutton",
+            style="FiveStarLayout.TRadiobutton",
         ).pack(side="left")
 
         stats_by_category = {
@@ -404,31 +407,33 @@ class StellaSoraApp:
 
     def _build_category_heading(self, name: str, loaded: bool, parent: ttk.Frame | None = None) -> None:
         container = parent or self.stats_content
-        heading = ttk.Frame(container, style="App.TFrame", padding=(4, 8, 4, 4))
+        heading = ttk.Frame(container, style="App.TFrame", padding=(3, 6, 3, 3))
         heading.pack(fill="x")
         ttk.Label(
             heading,
             text=name,
             background=BG,
             foreground=ACCENT_DARK if loaded else MUTED,
-            font=("Microsoft YaHei UI", 9, "bold"),
+            font=("Microsoft YaHei UI", 7, "bold"),
         ).pack(side="left")
         ttk.Label(
             heading,
             text="已加载" if loaded else "未加载",
             background=BG,
             foreground=ACCENT if loaded else WARM,
+            font=("Microsoft YaHei UI", 7),
         ).pack(side="right")
 
     def _build_missing_category(self, parent: ttk.Frame | None = None) -> None:
         container = parent or self.stats_content
-        frame = ttk.Frame(container, style="Panel.TFrame", padding=(16, 14))
+        frame = ttk.Frame(container, style="Panel.TFrame", padding=(13, 11))
         frame.pack(fill="both", expand=True)
         ttk.Label(
             frame,
             text="该分类尚未进入游戏历史缓存，请在游戏中打开对应卡池的招募记录后再刷新。",
             background=PANEL,
             foreground=MUTED,
+            font=("Microsoft YaHei UI", 7),
         ).pack(anchor="w")
 
     def _build_pool_section(
@@ -441,18 +446,18 @@ class StellaSoraApp:
         container = parent or self.stats_content
         section = ttk.Frame(container, style="Panel.TFrame")
         section.pack(fill="both", expand=True)
-        header = tk.Frame(section, background=color, height=103)
+        header = tk.Frame(section, background=color, height=82)
         header.pack(fill="x")
         header.pack_propagate(False)
 
         title = tk.Frame(header, background=color)
-        title.pack(side="left", fill="both", expand=True, padx=25, pady=16)
+        title.pack(side="left", fill="both", expand=True, padx=20, pady=13)
         tk.Label(
             title,
             text=category_name,
             background=color,
             foreground="#ffffff",
-            font=("Microsoft YaHei UI", 19, "bold"),
+            font=("Microsoft YaHei UI", 15, "bold"),
         ).pack(anchor="w")
         date_text = f"{self._format_date(pool.start_time)}  -  {self._format_date(pool.end_time)}"
         tk.Label(
@@ -460,69 +465,71 @@ class StellaSoraApp:
             text=date_text,
             background=color,
             foreground="#eef5fa",
-            font=("Microsoft YaHei UI", 11),
-        ).pack(anchor="w", pady=(4, 0))
+            font=("Microsoft YaHei UI", 9),
+        ).pack(anchor="w", pady=(3, 0))
 
         summary = tk.Frame(header, background=self._darken(color))
-        summary.pack(side="right", fill="y", padx=(0, 18), pady=12)
+        summary.pack(side="right", fill="y", padx=(0, 14), pady=10)
         self._pool_metric(summary, str(pool.total_pulls), "总抽数")
         self._pool_metric(summary, str(len(pool.five_stars)), "五星")
         average = "-" if pool.average_pulls is None else str(pool.average_pulls)
         self._pool_metric(summary, average, "平均抽数")
 
         hits = tk.Frame(section, background=PANEL)
-        hits.pack(fill="x", padx=18, pady=(15, 18))
+        hits.pack(fill="x", padx=14, pady=(12, 14))
         if not pool.five_stars:
             tk.Label(
                 hits,
                 text="该卡池的已加载记录中暂无五星角色",
                 background=PANEL,
                 foreground=MUTED,
-                font=("Microsoft YaHei UI", 10),
-                pady=20,
+                font=("Microsoft YaHei UI", 8),
+                pady=16,
             ).pack(anchor="w")
             return
         last_columns = 0
 
         def render_tiles(_event=None) -> None:
             nonlocal last_columns
-            columns = max(1, hits.winfo_width() // 144)
+            columns = max(1, hits.winfo_width() // 115)
             if columns == last_columns and hits.winfo_children():
                 return
             last_columns = columns
             for child in hits.winfo_children():
                 child.destroy()
             for index, pull in enumerate(pool.five_stars):
-                tile = tk.Frame(hits, background=PANEL, width=126, height=128)
-                tile.grid(row=index // columns, column=index % columns, padx=9, pady=5, sticky="nw")
+                tile = tk.Frame(hits, background=PANEL, width=101, height=102)
+                tile.grid(row=index // columns, column=index % columns, padx=7, pady=4, sticky="nw")
                 tile.grid_propagate(False)
                 photo = self._avatar_photo(pull.item_id, pull.kind, color)
                 self.avatar_images.append(photo)
-                tk.Label(tile, image=photo, background=PANEL, borderwidth=0).place(x=19, y=0, width=88, height=88)
+                tk.Label(tile, image=photo, background=PANEL, borderwidth=0).place(
+                    x=15, y=0, width=FIVE_STAR_AVATAR_SIZE, height=FIVE_STAR_AVATAR_SIZE
+                )
                 badge_color = "#4d9ba0" if pull.pity <= 30 else WARM if pull.pity <= 60 else "#b97a8a"
                 tk.Label(
                     tile,
                     text=f"{pull.pity} 抽",
                     background=badge_color,
                     foreground="#ffffff",
-                    font=("Microsoft YaHei UI", 9, "bold"),
-                    padx=7,
-                    pady=3,
-                ).place(x=61, y=66)
+                    font=("Microsoft YaHei UI", 7, "bold"),
+                    padx=6,
+                    pady=2,
+                ).place(x=49, y=53)
                 tk.Label(
                     tile,
                     text=pull.name,
                     background="#f8fbfe",
                     foreground=INK,
-                    font=("Microsoft YaHei UI", 9),
-                ).place(x=6, y=98, width=114, height=25)
+                    font=("Microsoft YaHei UI", 7),
+                ).place(x=5, y=78, width=91, height=20)
 
         hits.bind("<Configure>", render_tiles)
         self.root.after_idle(render_tiles)
 
     @staticmethod
     def _pool_metric(parent: tk.Frame, value: str, label: str) -> None:
-        box = tk.Frame(parent, background=parent.cget("background"), width=51)
+        box = tk.Frame(parent, background=parent.cget("background"), width=41)
         box.pack(side="left", fill="y", padx=2)
         box.pack_propagate(False)
         tk.Label(
@@ -530,14 +537,14 @@ class StellaSoraApp:
             text=value,
             background=box.cget("background"),
             foreground="#ffffff",
-            font=("Microsoft YaHei UI", 16, "bold"),
-        ).pack(pady=(10, 0))
+            font=("Microsoft YaHei UI", 13, "bold"),
+        ).pack(pady=(8, 0))
         tk.Label(
             box,
             text=label,
             background=box.cget("background"),
             foreground="#e5ebe7",
-            font=("Microsoft YaHei UI", 10),
+            font=("Microsoft YaHei UI", 8),
         ).pack()
 
     @staticmethod
@@ -557,7 +564,7 @@ class StellaSoraApp:
         resource_root = Path(getattr(sys, "_MEIPASS", Path(__file__).resolve().parent.parent))
         external_path = self.output_dir / "assets" / folder / f"{item_id}.png"
         path = external_path if external_path.exists() else resource_root / "assets" / folder / f"{item_id}.png"
-        size = 88
+        size = FIVE_STAR_AVATAR_SIZE
         try:
             source = Image.open(path).convert("RGBA")
             source = ImageOps.fit(source, (size - 6, size - 6), method=Image.Resampling.LANCZOS)

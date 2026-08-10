@@ -1,8 +1,8 @@
 {
-  "version": "1.2.5",
-  "url": "https://github.com/zhenkotone/stellasora_gacha/releases/download/v1.2.5/StellaSoraGachaTool-Portable-1.2.5.zip",
-  "sha256": "4008266bc0bde9b08ad930aa422bc299356298ecc4d5ecc0c72903097193c9d5",
-  "installer_url": "https://github.com/zhenkotone/stellasora_gacha/releases/download/v1.2.5/StellaSoraGachaTool-Setup-1.2.5.exe",
-  "installer_sha256": "bfee2b228eec5da56d6e6dc56da677e9f5dbf34960c9e8b5cdb9e523e7b30296",
-  "notes": "修复更新后 Python 运行库临时文件丢失导致无法启动的问题。"
+  "version": "1.2.6",
+  "url": "https://github.com/zhenkotone/stellasora_gacha/releases/download/v1.2.6/StellaSoraGachaTool-Portable-1.2.6.zip",
+  "sha256": "5f3bad3f823d3da0b3f295a05ee80f539a594eed56eee1ea612ff7215692757e",
+  "installer_url": "https://github.com/zhenkotone/stellasora_gacha/releases/download/v1.2.6/StellaSoraGachaTool-Setup-1.2.6.exe",
+  "installer_sha256": "52baacb725e539a2e1dc7419b6ac0bcdc281372bb5f7b6adb48cfa7d8c94605a",
+  "notes": "五星记录区域的文字和头像缩放至 80%。"
 }
