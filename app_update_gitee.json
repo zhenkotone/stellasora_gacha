@@ -1,8 +1,8 @@
 {
-  "version": "1.2.1",
-  "url": "https://gitee.com/zhen-z/stellasora_gacha/releases/download/v1.2.1/StellaSoraGachaTool-Portable-1.2.1.zip",
-  "sha256": "f071562a7219a4ad275ee0a78306ae70fe2a4d086e484bd2d4abff99d40b01e1",
-  "installer_url": "https://gitee.com/zhen-z/stellasora_gacha/releases/download/v1.2.1/StellaSoraGachaTool-Setup-1.2.1.exe",
-  "installer_sha256": "772eca4b10849bdc850cc1a80cc14530ceb964eb5a10d82f708bc40a4afdc68e",
-  "notes": "便携版改为带版本号的压缩包；安装版更新不再自动启动程序，避免 Windows 740 权限错误。"
+  "version": "1.2.2",
+  "url": "https://gitee.com/zhen-z/stellasora_gacha/releases/download/v1.2.2/StellaSoraGachaTool-Portable-1.2.2.zip",
+  "sha256": "b9f625c7100b244e4d890fd801ad92a67951a2c56fe602f8da0ad015d99e5425",
+  "installer_url": "https://gitee.com/zhen-z/stellasora_gacha/releases/download/v1.2.2/StellaSoraGachaTool-Setup-1.2.2.exe",
+  "installer_sha256": "8e4d512793ddb08ca55b5acd5ea73665d7e5f2dd6a4eb7d634fa3cb77784d185",
+  "notes": "招募记录支持十连逐项显示：五星旅人和五星秘纹名称为橙色，其他物品保持黑色。"
 }

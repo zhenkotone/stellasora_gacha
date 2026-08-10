@@ -18,6 +18,7 @@ from PIL import Image, ImageDraw, ImageOps, ImageTk
 
 from .app_updater import UPDATE_MANIFEST_URL, AppUpdate, check_for_update, download_update, is_installed_application
 from .catalog import (
+    FIVE_STAR_ITEMS,
     format_random_attr,
     gacha_item_name,
     gem_type_name,
@@ -49,7 +50,7 @@ ACCENT_DARK = "#476d8b"
 WARM = "#c58b68"
 HEADER = "#607d98"
 POOL_COLORS = ("#7776aa", "#4d9ba0", "#5d82a9", "#8e6d9c")
-APP_VERSION = "1.2.1"
+APP_VERSION = "1.2.2"
 GACHA_CATEGORY_ORDER = (
     CATEGORY_TRAVELER_LIMITED,
     CATEGORY_DISC_LIMITED,
@@ -249,22 +250,45 @@ class StellaSoraApp:
     def _build_gacha_tab(self) -> None:
         tab = ttk.Frame(self.notebook, style="Panel.TFrame")
         tab.columnconfigure(0, weight=1)
-        tab.rowconfigure(1, weight=1)
+        tab.rowconfigure(2, weight=1)
         self.notebook.add(tab, text="招募记录")
         self.gacha_filter = tk.StringVar()
         self._toolbar(tab, self.gacha_filter, self._fill_gacha).grid(row=0, column=0, sticky="ew")
-        columns = ("time", "gid", "mode", "count", "items")
-        self.gacha_tree = ttk.Treeview(tab, columns=columns, show="headings", selectmode="browse")
-        headings = {"time": "时间", "gid": "记录 ID", "mode": "类型", "count": "数量", "items": "结果"}
-        widths = {"time": 170, "gid": 110, "mode": 80, "count": 65, "items": 620}
-        for column in columns:
-            self.gacha_tree.heading(column, text=headings[column])
-            self.gacha_tree.column(column, width=widths[column], minwidth=60, stretch=column == "items")
-        scroll = ttk.Scrollbar(tab, orient="vertical", command=self.gacha_tree.yview)
-        self.gacha_tree.configure(yscrollcommand=scroll.set)
-        self.gacha_tree.grid(row=1, column=0, sticky="nsew")
-        scroll.grid(row=1, column=1, sticky="ns")
-        self.gacha_tree.bind("<Double-1>", self._show_gacha_detail)
+        header = tk.Frame(tab, background="#e4edf5", height=34)
+        header.grid(row=1, column=0, sticky="ew")
+        header.grid_propagate(False)
+        headers = ("时间", "记录 ID", "类型", "数量", "结果")
+        widths = (170, 110, 80, 65)
+        for column, text in enumerate(headers):
+            if column < len(widths):
+                header.grid_columnconfigure(column, minsize=widths[column])
+            else:
+                header.grid_columnconfigure(column, weight=1)
+            tk.Label(
+                header,
+                text=text,
+                background="#e4edf5",
+                foreground=INK,
+                font=("Microsoft YaHei UI", 9, "bold"),
+                anchor="w",
+                padx=8,
+            ).grid(row=0, column=column, sticky="nsew")
+
+        self.gacha_canvas = tk.Canvas(tab, background=PANEL, highlightthickness=0, borderwidth=0)
+        scroll = ttk.Scrollbar(tab, orient="vertical", command=self.gacha_canvas.yview)
+        self.gacha_canvas.configure(yscrollcommand=scroll.set)
+        self.gacha_canvas.grid(row=2, column=0, sticky="nsew")
+        scroll.grid(row=2, column=1, sticky="ns")
+        self.gacha_rows_content = tk.Frame(self.gacha_canvas, background=PANEL)
+        self.gacha_rows_window = self.gacha_canvas.create_window((0, 0), window=self.gacha_rows_content, anchor="nw")
+        self.gacha_rows_content.bind(
+            "<Configure>",
+            lambda _event: self.gacha_canvas.configure(scrollregion=self.gacha_canvas.bbox("all")),
+        )
+        self.gacha_canvas.bind(
+            "<Configure>",
+            lambda event: self.gacha_canvas.itemconfigure(self.gacha_rows_window, width=event.width),
+        )
 
     def _build_five_star_tab(self) -> None:
         tab = ttk.Frame(self.notebook, style="Panel.TFrame")
@@ -826,31 +850,89 @@ class StellaSoraApp:
             return "-"
 
     def _fill_gacha(self) -> None:
-        if not hasattr(self, "gacha_tree"):
+        if not hasattr(self, "gacha_rows_content"):
             return
-        self.gacha_tree.delete(*self.gacha_tree.get_children())
+        for child in self.gacha_rows_content.winfo_children():
+            child.destroy()
         self.gacha_rows.clear()
         if self.snapshot is None:
             return
         needle = self.gacha_filter.get().strip().casefold()
+        visible_groups: list[dict] = []
         for group in reversed(self.snapshot.gacha):
             ids = group.get("Ids", [])
             names = [gacha_item_name(value) for value in ids]
             haystack = " ".join([str(group.get("Gid", "")), *names]).casefold()
             if needle and needle not in haystack:
                 continue
-            iid = self.gacha_tree.insert(
-                "",
-                "end",
-                values=(
-                    self._format_time(group.get("Time")),
-                    group.get("Gid", "-"),
-                    "十连" if len(ids) > 1 else "单抽",
-                    len(ids),
-                    "、".join(names),
-                ),
-            )
-            self.gacha_rows[iid] = group
+            visible_groups.append(group)
+        if not visible_groups:
+            tk.Label(
+                self.gacha_rows_content,
+                text="没有匹配的招募记录",
+                background=PANEL,
+                foreground=MUTED,
+                padx=12,
+                pady=16,
+            ).pack(anchor="w")
+            return
+        for index, group in enumerate(visible_groups):
+            self._add_gacha_row(index, group)
+
+    def _add_gacha_row(self, index: int, group: dict) -> None:
+        ids = group.get("Ids", [])
+        row = tk.Frame(self.gacha_rows_content, background=PANEL, highlightbackground=LINE, highlightthickness=1)
+        row.grid(row=index, column=0, sticky="ew")
+        self.gacha_rows_content.grid_columnconfigure(0, weight=1)
+        widths = (170, 110, 80, 65)
+        for column, width in enumerate(widths):
+            row.grid_columnconfigure(column, minsize=width)
+        row.grid_columnconfigure(4, weight=1)
+        values = (
+            self._format_time(group.get("Time")),
+            group.get("Gid", "-"),
+            "十连" if len(ids) > 1 else "单抽",
+            len(ids),
+        )
+        for column, value in enumerate(values):
+            tk.Label(
+                row,
+                text=str(value),
+                background=PANEL,
+                foreground=INK,
+                font=("Microsoft YaHei UI", 9),
+                anchor="w",
+                padx=8,
+                pady=7,
+            ).grid(row=0, column=column, sticky="nsew")
+        item_text = tk.Text(
+            row,
+            height=2 if len(ids) > 4 else 1,
+            wrap="word",
+            relief="flat",
+            borderwidth=0,
+            background=PANEL,
+            foreground=INK,
+            font=("Microsoft YaHei UI", 9),
+            padx=8,
+            pady=7,
+            cursor="arrow",
+        )
+        item_text.tag_configure("five_star", foreground="#d87822")
+        for position, item_id in enumerate(ids):
+            item_text.insert("end", gacha_item_name(item_id), "five_star" if self._is_five_star_item(item_id) else ())
+            if position + 1 < len(ids):
+                item_text.insert("end", "、")
+        item_text.configure(state="disabled")
+        item_text.grid(row=0, column=4, sticky="nsew")
+        self.gacha_rows[str(index)] = group
+
+    @staticmethod
+    def _is_five_star_item(value: Any) -> bool:
+        try:
+            return int(value) in FIVE_STAR_ITEMS
+        except (TypeError, ValueError):
+            return False
 
     def _fill_emblems(self) -> None:
         if not hasattr(self, "emblem_tree"):
