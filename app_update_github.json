@@ -1,8 +1,8 @@
 {
-  "version": "1.2.3",
-  "url": "https://github.com/zhenkotone/stellasora_gacha/releases/download/v1.2.3/StellaSoraGachaTool-Portable-1.2.3.zip",
-  "sha256": "00560c0f1e6e2ee91b5622682bef366d652141b6126ebcbb1e3e0ec85e5ad276",
-  "installer_url": "https://github.com/zhenkotone/stellasora_gacha/releases/download/v1.2.3/StellaSoraGachaTool-Setup-1.2.3.exe",
-  "installer_sha256": "74f3a36d906a8cfc9aa360729e800fd9977a641f8ff1708a0d59959a6c11f966",
-  "notes": "修复自定义安装目录被误判为便携版的问题；安装版会下载 Setup 安装程序。"
+  "version": "1.2.4",
+  "url": "https://github.com/zhenkotone/stellasora_gacha/releases/download/v1.2.4/StellaSoraGachaTool-Portable-1.2.4.zip",
+  "sha256": "45a313435448a125e7e2e321f31bab78d56aadbca3114a3bcfe5009e3a7bbfe8",
+  "installer_url": "https://github.com/zhenkotone/stellasora_gacha/releases/download/v1.2.4/StellaSoraGachaTool-Setup-1.2.4.exe",
+  "installer_sha256": "20cf4288cb5f9b5f2b8c1639fd5fabbb61acb344bd30b4f0394383512f1c8a41",
+  "notes": "招募记录改为全局按时间倒序显示，最新记录排在最前。"
 }

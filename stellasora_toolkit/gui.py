@@ -50,7 +50,7 @@ ACCENT_DARK = "#476d8b"
 WARM = "#c58b68"
 HEADER = "#607d98"
 POOL_COLORS = ("#7776aa", "#4d9ba0", "#5d82a9", "#8e6d9c")
-APP_VERSION = "1.2.3"
+APP_VERSION = "1.2.4"
 GACHA_CATEGORY_ORDER = (
     CATEGORY_TRAVELER_LIMITED,
     CATEGORY_DISC_LIMITED,
@@ -849,6 +849,16 @@ class StellaSoraApp:
         except (TypeError, ValueError, OSError, OverflowError):
             return "-"
 
+    @staticmethod
+    def _gacha_sort_key(group: dict) -> tuple[int, int]:
+        def as_int(value: Any) -> int:
+            try:
+                return int(value)
+            except (TypeError, ValueError):
+                return 0
+
+        return as_int(group.get("Time")), as_int(group.get("Gid"))
+
     def _fill_gacha(self) -> None:
         if not hasattr(self, "gacha_rows_content"):
             return
@@ -859,7 +869,7 @@ class StellaSoraApp:
             return
         needle = self.gacha_filter.get().strip().casefold()
         visible_groups: list[dict] = []
-        for group in reversed(self.snapshot.gacha):
+        for group in sorted(self.snapshot.gacha, key=self._gacha_sort_key, reverse=True):
             ids = group.get("Ids", [])
             names = [gacha_item_name(value) for value in ids]
             haystack = " ".join([str(group.get("Gid", "")), *names]).casefold()
