@@ -1,8 +1,8 @@
 {
-  "version": "1.2.4",
-  "url": "https://github.com/zhenkotone/stellasora_gacha/releases/download/v1.2.4/StellaSoraGachaTool-Portable-1.2.4.zip",
-  "sha256": "45a313435448a125e7e2e321f31bab78d56aadbca3114a3bcfe5009e3a7bbfe8",
-  "installer_url": "https://github.com/zhenkotone/stellasora_gacha/releases/download/v1.2.4/StellaSoraGachaTool-Setup-1.2.4.exe",
-  "installer_sha256": "20cf4288cb5f9b5f2b8c1639fd5fabbb61acb344bd30b4f0394383512f1c8a41",
-  "notes": "招募记录改为全局按时间倒序显示，最新记录排在最前。"
+  "version": "1.2.5",
+  "url": "https://github.com/zhenkotone/stellasora_gacha/releases/download/v1.2.5/StellaSoraGachaTool-Portable-1.2.5.zip",
+  "sha256": "4008266bc0bde9b08ad930aa422bc299356298ecc4d5ecc0c72903097193c9d5",
+  "installer_url": "https://github.com/zhenkotone/stellasora_gacha/releases/download/v1.2.5/StellaSoraGachaTool-Setup-1.2.5.exe",
+  "installer_sha256": "bfee2b228eec5da56d6e6dc56da677e9f5dbf34960c9e8b5cdb9e523e7b30296",
+  "notes": "修复更新后 Python 运行库临时文件丢失导致无法启动的问题。"
 }

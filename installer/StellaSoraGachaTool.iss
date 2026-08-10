@@ -1,15 +1,15 @@
 #define MyAppName "星塔旅人数据工具"
-#define MyAppVersion "1.2.4"
+#define MyAppVersion "1.2.5"
 #define MyAppExeName "StellaSoraGachaTool.exe"
 
-#ifndef MySourceExe
-  #define MySourceExe "..\release\gitee\StellaSoraGachaTool.exe"
+#ifndef MySourceDir
+  #define MySourceDir "..\release\gitee\StellaSoraGachaTool"
 #endif
 #ifndef MyOutputDir
   #define MyOutputDir "..\release\gitee"
 #endif
 #ifndef MyOutputBaseFilename
-  #define MyOutputBaseFilename "StellaSoraGachaTool-Setup-1.2.4"
+  #define MyOutputBaseFilename "StellaSoraGachaTool-Setup-1.2.5"
 #endif
 
 [Setup]
@@ -31,7 +31,7 @@ SetupIconFile=..\assets\app_icon.ico
 CloseApplications=yes
 RestartApplications=no
 UninstallDisplayIcon={app}\{#MyAppExeName}
-VersionInfoVersion=1.2.4.0
+VersionInfoVersion=1.2.5.0
 VersionInfoProductName={#MyAppName}
 VersionInfoDescription={#MyAppName} 安装程序
 
@@ -39,7 +39,7 @@ VersionInfoDescription={#MyAppName} 安装程序
 Name: "desktopicon"; Description: "创建桌面快捷方式"; GroupDescription: "附加选项："; Flags: unchecked
 
 [Files]
-Source: "{#MySourceExe}"; DestDir: "{app}"; DestName: "{#MyAppExeName}"; Flags: ignoreversion
+Source: "{#MySourceDir}\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 
 [Registry]
 Root: HKCU; Subkey: "Software\StellaSoraGachaTool"; ValueType: string; ValueName: "InstallLocation"; ValueData: "{app}"; Flags: uninsdeletekey
