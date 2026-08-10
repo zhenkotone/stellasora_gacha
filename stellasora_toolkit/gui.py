@@ -15,7 +15,7 @@ from typing import Any
 
 from PIL import Image, ImageDraw, ImageOps, ImageTk
 
-from .app_updater import UPDATE_MANIFEST_URL, AppUpdate, check_for_update, download_update, sha256_file
+from .app_updater import UPDATE_MANIFEST_URL, AppUpdate, check_for_update, download_update, is_installed_application
 from .catalog import (
     format_random_attr,
     gacha_item_name,
@@ -48,7 +48,7 @@ ACCENT_DARK = "#476d8b"
 WARM = "#c58b68"
 HEADER = "#607d98"
 POOL_COLORS = ("#7776aa", "#4d9ba0", "#5d82a9", "#8e6d9c")
-APP_VERSION = "1.1.6"
+APP_VERSION = "1.2.0"
 GACHA_CATEGORY_ORDER = (
     CATEGORY_TRAVELER_LIMITED,
     CATEGORY_DISC_LIMITED,
@@ -180,6 +180,9 @@ class StellaSoraApp:
         title_box.grid(row=0, column=0, sticky="w")
         ttk.Label(title_box, text="星塔旅人数据工具", style="Header.TLabel").pack(anchor="w")
         ttk.Label(title_box, text="四类卡池与五星记录", style="HeaderSub.TLabel").pack(anchor="w", pady=(2, 0))
+        ttk.Label(header, text=f"当前版本 v{APP_VERSION}", style="HeaderSub.TLabel").grid(
+            row=0, column=1, sticky="e", padx=(16, 18)
+        )
         actions = ttk.Frame(header, style="Header.TFrame")
         actions.grid(row=0, column=2, sticky="e")
         self.open_button = ttk.Button(actions, text="打开导出目录", command=self._open_exports)
@@ -669,15 +672,22 @@ class StellaSoraApp:
         self.progress.grid()
         self.progress.start(12)
         self.status_var.set(f"正在下载软件更新 {update.version}")
+        use_installer = is_installed_application(Path(sys.executable).resolve()) and update.has_installer
 
         def work() -> None:
             try:
                 path = download_update(
                     update,
-                    Path(sys.executable).resolve().parent,
+                    self.output_dir / "updates",
                     progress=lambda message: self.events.put(("progress", message)),
+                    installer=use_installer,
                 )
-                self.events.put(("app_update_downloaded", (update, path)))
+                if not use_installer:
+                    version = update.version.lstrip("vV")
+                    saved_path = self.output_dir / "updates" / f"星塔旅人数据工具-v{version}.exe"
+                    os.replace(path, saved_path)
+                    path = saved_path
+                self.events.put(("app_update_downloaded", (update, path, use_installer)))
             except Exception as error:
                 self.events.put(("app_update_download_error", error))
 
@@ -685,19 +695,14 @@ class StellaSoraApp:
 
     def _install_app_update(self, downloaded_path: Path) -> None:
         target = Path(sys.executable).resolve()
-        expected_hash = sha256_file(downloaded_path)
         quote = lambda value: "'" + str(value).replace("'", "''") + "'"
+        installer = subprocess.Popen(
+            [str(downloaded_path), "/VERYSILENT", "/SUPPRESSMSGBOXES", "/NORESTART", "/CLOSEAPPLICATIONS"],
+            creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
+        )
         command = (
-            f"$process = Get-Process -Id {os.getpid()} -ErrorAction SilentlyContinue; "
-            f"if ($process) {{ Wait-Process -Id {os.getpid()} -ErrorAction SilentlyContinue }}; "
-            "Start-Sleep -Seconds 3; "
-            "$installed = $false; "
-            "for ($attempt = 0; $attempt -lt 20; $attempt++) { "
-            f"try {{ Copy-Item -LiteralPath {quote(downloaded_path)} -Destination {quote(target)} -Force -ErrorAction Stop; "
-            f"if ((Get-FileHash -LiteralPath {quote(target)} -Algorithm SHA256).Hash.ToLower() -ne '{expected_hash}') {{ throw 'update checksum verification failed' }}; "
-            f"Remove-Item -LiteralPath {quote(downloaded_path)} -Force; $installed = $true; break }} "
-            "catch { Start-Sleep -Seconds 1 } }; "
-            "if ($installed) { "
+            f"Wait-Process -Id {installer.pid} -ErrorAction SilentlyContinue; "
+            "if (Test-Path -LiteralPath " + quote(target) + ") { "
             "$runtime = Join-Path $env:LOCALAPPDATA 'StellaSoraGachaTool\\runtime'; "
             "New-Item -ItemType Directory -Path $runtime -Force | Out-Null; "
             "$env:TEMP = $runtime; $env:TMP = $runtime; "
@@ -768,12 +773,19 @@ class StellaSoraApp:
                         self.status_var.set("软件更新检查失败")
                         messagebox.showerror("检查更新失败", str(error), parent=self.root)
                 elif event == "app_update_downloaded":
-                    update, path = payload
+                    update, path, use_installer = payload
                     self._finish_busy()
                     self.update_button.state(["!disabled"])
                     self.status_var.set(f"软件更新 {update.version} 下载完成")
-                    messagebox.showinfo("更新就绪", "软件将关闭、安装更新并自动重新启动。", parent=self.root)
-                    self._install_app_update(path)
+                    if use_installer:
+                        messagebox.showinfo("更新就绪", "软件将关闭并由安装程序完成更新，然后自动重新启动。", parent=self.root)
+                        self._install_app_update(path)
+                    else:
+                        messagebox.showinfo(
+                            "更新已下载",
+                            f"新版已保存到：\n{path}\n\n关闭当前软件后，用该文件替换原便携版即可。",
+                            parent=self.root,
+                        )
                 elif event == "app_update_download_error":
                     self._finish_busy()
                     self.update_button.state(["!disabled"])

@@ -1,6 +1,8 @@
 {
-  "version": "1.1.6",
-  "url": "https://github.com/zhenkotone/stellasora_gacha/releases/download/v1.1.6/StellaSoraGachaTool.exe",
-  "sha256": "aded44d435e1d5605f0aa17806ad4fab57104e008c933944860d657f164cc727",
-  "notes": "修复在线更新后偶发的 Python DLL 临时目录加载失败。"
+  "version": "1.2.0",
+  "url": "https://github.com/zhenkotone/stellasora_gacha/releases/download/v1.2.0/StellaSoraGachaTool-1.2.0.exe",
+  "sha256": "55fc2aca20f7475f316a7695ced0d778922121307e3a37bc8ba5f2f9df148a1e",
+  "installer_url": "https://github.com/zhenkotone/stellasora_gacha/releases/download/v1.2.0/StellaSoraGachaTool-Setup-1.2.0.exe",
+  "installer_sha256": "22f4a59c632c801ed5ac6e17cf2a4b21385ee6c510918383c657ed063c57080e",
+  "notes": "安装版在线更新改由安装程序完成，避免运行中替换 exe；便携版会下载版本化文件供手动替换。"
 }

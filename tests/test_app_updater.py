@@ -2,8 +2,16 @@ import hashlib
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
-from stellasora_toolkit.app_updater import is_newer_version, sha256_file
+from stellasora_toolkit.app_updater import (
+    APP_EXE_NAME,
+    APP_INSTALL_FOLDER,
+    is_installed_application,
+    is_newer_version,
+    parse_update_manifest,
+    sha256_file,
+)
 
 
 class AppUpdaterTests(unittest.TestCase):
@@ -24,6 +32,28 @@ class AppUpdaterTests(unittest.TestCase):
             path = Path(directory) / "update.exe"
             path.write_bytes(b"verified update")
             self.assertEqual(sha256_file(path), hashlib.sha256(b"verified update").hexdigest())
+
+    def test_parses_installer_asset_with_its_own_hash(self):
+        update = parse_update_manifest(
+            {
+                "version": "1.2.0",
+                "url": "https://example.test/portable.exe",
+                "sha256": "a" * 64,
+                "installer_url": "https://example.test/setup.exe",
+                "installer_sha256": "b" * 64,
+            }
+        )
+        self.assertTrue(update.has_installer)
+        self.assertEqual(update.installer_sha256, "b" * 64)
+
+    def test_recognizes_only_the_default_installed_executable(self):
+        with tempfile.TemporaryDirectory() as directory:
+            app_data = Path(directory)
+            installed = app_data / APP_INSTALL_FOLDER / APP_EXE_NAME
+            portable = app_data / "Downloads" / APP_EXE_NAME
+            with patch.dict("stellasora_toolkit.app_updater.os.environ", {"LOCALAPPDATA": str(app_data)}, clear=False):
+                self.assertTrue(is_installed_application(installed))
+                self.assertFalse(is_installed_application(portable))
 
 
 if __name__ == "__main__":
