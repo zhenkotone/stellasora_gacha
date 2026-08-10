@@ -19,6 +19,7 @@ UPDATE_MANIFEST_URLS = {
 UPDATE_MANIFEST_URL = UPDATE_MANIFEST_URLS.get(UPDATE_SOURCE, UPDATE_MANIFEST_URLS["gitee"])
 APP_EXE_NAME = "StellaSoraGachaTool.exe"
 APP_INSTALL_FOLDER = "StellaSoraGachaTool"
+APP_REGISTRY_KEY = r"Software\StellaSoraGachaTool"
 ProgressCallback = Callable[[str], None]
 
 
@@ -91,11 +92,29 @@ def check_for_update(manifest_url: str, current_version: str) -> AppUpdate | Non
 
 
 def is_installed_application(executable: Path) -> bool:
-    local_app_data = os.environ.get("LOCALAPPDATA")
-    if not local_app_data:
+    executable = executable.resolve()
+    if executable.name.casefold() != APP_EXE_NAME.casefold():
         return False
-    expected = Path(local_app_data) / APP_INSTALL_FOLDER / APP_EXE_NAME
-    return executable.resolve() == expected.resolve()
+    if os.name == "nt":
+        try:
+            import winreg
+
+            with winreg.OpenKey(winreg.HKEY_CURRENT_USER, APP_REGISTRY_KEY) as key:
+                install_location, _ = winreg.QueryValueEx(key, "InstallLocation")
+            if executable.parent == Path(str(install_location)).resolve():
+                return True
+        except OSError:
+            pass
+        if any(executable.parent.glob("unins*.exe")):
+            return True
+    local_app_data = os.environ.get("LOCALAPPDATA")
+    if local_app_data:
+        expected = Path(local_app_data) / APP_INSTALL_FOLDER / APP_EXE_NAME
+        if executable == expected.resolve():
+            return True
+    # Older installers did not persist their selected directory. Preserve support
+    # for their custom locations while keeping ordinary download folders portable.
+    return executable.parent.name.casefold() == APP_INSTALL_FOLDER.casefold()
 
 
 def download_update(

@@ -71,6 +71,11 @@ class AppUpdaterTests(unittest.TestCase):
                 self.assertTrue(is_installed_application(installed))
                 self.assertFalse(is_installed_application(portable))
 
+    def test_recognizes_legacy_custom_install_folder(self):
+        with tempfile.TemporaryDirectory() as directory:
+            executable = Path(directory) / APP_INSTALL_FOLDER / APP_EXE_NAME
+            self.assertTrue(is_installed_application(executable))
+
 
 if __name__ == "__main__":
     unittest.main()
