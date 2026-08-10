@@ -1,8 +1,8 @@
 {
   "version": "1.2.6",
   "url": "https://gitee.com/zhen-z/stellasora_gacha/releases/download/v1.2.6/StellaSoraGachaTool-Portable-1.2.6.zip",
-  "sha256": "db2a328c6ec10f5ed00fd46a5be0e60fef1c9334d4b583016d152396fd826cb8",
+  "sha256": "7fb5bc7ce2d324e0efe2ffbc4e079e341da317558c807de619193b70362e7330",
   "installer_url": "https://gitee.com/zhen-z/stellasora_gacha/releases/download/v1.2.6/StellaSoraGachaTool-Setup-1.2.6.exe",
-  "installer_sha256": "b42701788962880ef284db007b58bd04f85764d5a425bcabf5041eedb9fe24db",
+  "installer_sha256": "73a9e25971df0ca11cf86ed03537b74d6e7556f5a67e6033d4cd07b80ca69b0d",
   "notes": "五星记录区域的文字和头像缩放至 80%。"
 }
