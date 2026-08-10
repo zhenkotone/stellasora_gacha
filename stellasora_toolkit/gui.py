@@ -12,6 +12,7 @@ from datetime import datetime
 from pathlib import Path
 from tkinter import messagebox, ttk
 from typing import Any
+from urllib.parse import urlparse
 
 from PIL import Image, ImageDraw, ImageOps, ImageTk
 
@@ -48,7 +49,7 @@ ACCENT_DARK = "#476d8b"
 WARM = "#c58b68"
 HEADER = "#607d98"
 POOL_COLORS = ("#7776aa", "#4d9ba0", "#5d82a9", "#8e6d9c")
-APP_VERSION = "1.2.0"
+APP_VERSION = "1.2.1"
 GACHA_CATEGORY_ORDER = (
     CATEGORY_TRAVELER_LIMITED,
     CATEGORY_DISC_LIMITED,
@@ -684,7 +685,8 @@ class StellaSoraApp:
                 )
                 if not use_installer:
                     version = update.version.lstrip("vV")
-                    saved_path = self.output_dir / "updates" / f"星塔旅人数据工具-v{version}.exe"
+                    suffix = Path(urlparse(update.url).path).suffix or ".bin"
+                    saved_path = self.output_dir / "updates" / f"星塔旅人数据工具-v{version}{suffix}"
                     os.replace(path, saved_path)
                     path = saved_path
                 self.events.put(("app_update_downloaded", (update, path, use_installer)))
@@ -783,7 +785,7 @@ class StellaSoraApp:
                     else:
                         messagebox.showinfo(
                             "更新已下载",
-                            f"新版已保存到：\n{path}\n\n关闭当前软件后，用该文件替换原便携版即可。",
+                            f"新版压缩包已保存到：\n{path}\n\n请解压后运行其中的新版程序。",
                             parent=self.root,
                         )
                 elif event == "app_update_download_error":

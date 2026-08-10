@@ -1,5 +1,5 @@
 #define MyAppName "星塔旅人数据工具"
-#define MyAppVersion "1.2.0"
+#define MyAppVersion "1.2.1"
 #define MyAppExeName "StellaSoraGachaTool.exe"
 
 #ifndef MySourceExe
@@ -9,7 +9,7 @@
   #define MyOutputDir "..\release\gitee"
 #endif
 #ifndef MyOutputBaseFilename
-  #define MyOutputBaseFilename "StellaSoraGachaTool-Setup-1.2.0"
+  #define MyOutputBaseFilename "StellaSoraGachaTool-Setup-1.2.1"
 #endif
 
 [Setup]
@@ -31,7 +31,7 @@ SetupIconFile=..\assets\app_icon.ico
 CloseApplications=yes
 RestartApplications=no
 UninstallDisplayIcon={app}\{#MyAppExeName}
-VersionInfoVersion=1.2.0.0
+VersionInfoVersion=1.2.1.0
 VersionInfoProductName={#MyAppName}
 VersionInfoDescription={#MyAppName} 安装程序
 
@@ -44,6 +44,3 @@ Source: "{#MySourceExe}"; DestDir: "{app}"; DestName: "{#MyAppExeName}"; Flags: 
 [Icons]
 Name: "{autoprograms}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; WorkingDir: "{app}"
 Name: "{autodesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; WorkingDir: "{app}"; Tasks: desktopicon
-
-[Run]
-Filename: "{app}\{#MyAppExeName}"; Description: "启动 {#MyAppName}"; Flags: nowait postinstall skipifsilent

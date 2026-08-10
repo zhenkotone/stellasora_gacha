@@ -111,7 +111,8 @@ def download_update(
     expected_hash = update.installer_sha256 if installer else update.sha256
     assert download_url is not None and expected_hash is not None
     target_dir.mkdir(parents=True, exist_ok=True)
-    fd, temp_name = tempfile.mkstemp(prefix="stellasora-update-", suffix=".exe", dir=target_dir)
+    suffix = Path(urlparse(download_url).path).suffix or ".bin"
+    fd, temp_name = tempfile.mkstemp(prefix="stellasora-update-", suffix=suffix, dir=target_dir)
     digest = hashlib.sha256()
     try:
         request = Request(download_url, headers={"User-Agent": "StellaSoraToolkit/1.0"})

@@ -1,8 +1,8 @@
 {
-  "version": "1.2.0",
-  "url": "https://github.com/zhenkotone/stellasora_gacha/releases/download/v1.2.0/StellaSoraGachaTool-1.2.0.exe",
-  "sha256": "55fc2aca20f7475f316a7695ced0d778922121307e3a37bc8ba5f2f9df148a1e",
-  "installer_url": "https://github.com/zhenkotone/stellasora_gacha/releases/download/v1.2.0/StellaSoraGachaTool-Setup-1.2.0.exe",
-  "installer_sha256": "22f4a59c632c801ed5ac6e17cf2a4b21385ee6c510918383c657ed063c57080e",
-  "notes": "安装版在线更新改由安装程序完成，避免运行中替换 exe；便携版会下载版本化文件供手动替换。"
+  "version": "1.2.1",
+  "url": "https://github.com/zhenkotone/stellasora_gacha/releases/download/v1.2.1/StellaSoraGachaTool-Portable-1.2.1.zip",
+  "sha256": "cb62f13189a6825027d04291782984a385e08812cd021248edd254c38b949242",
+  "installer_url": "https://github.com/zhenkotone/stellasora_gacha/releases/download/v1.2.1/StellaSoraGachaTool-Setup-1.2.1.exe",
+  "installer_sha256": "c4169d09730d73051cca6ff5dc5fc8edd74fe843bef1c716c715b7fd322b695a",
+  "notes": "便携版改为带版本号的压缩包；安装版更新不再自动启动程序，避免 Windows 740 权限错误。"
 }

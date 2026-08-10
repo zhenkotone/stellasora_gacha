@@ -1,8 +1,8 @@
 {
-  "version": "1.2.0",
-  "url": "https://gitee.com/zhen-z/stellasora_gacha/releases/download/v1.2.0/StellaSoraGachaTool-1.2.0.exe",
-  "sha256": "6cb42766195dd3f315fe5869459d145a0cf5a4e1d629eab7e3d8d7abadc4012e",
-  "installer_url": "https://gitee.com/zhen-z/stellasora_gacha/releases/download/v1.2.0/StellaSoraGachaTool-Setup-1.2.0.exe",
-  "installer_sha256": "b384dde9f9314d46a0a2284fb5e1bba8cc863c2ac2ed81b4dcd3269922f5c211",
-  "notes": "安装版在线更新改由安装程序完成，避免运行中替换 exe；便携版会下载版本化文件供手动替换。"
+  "version": "1.2.1",
+  "url": "https://gitee.com/zhen-z/stellasora_gacha/releases/download/v1.2.1/StellaSoraGachaTool-Portable-1.2.1.zip",
+  "sha256": "f071562a7219a4ad275ee0a78306ae70fe2a4d086e484bd2d4abff99d40b01e1",
+  "installer_url": "https://gitee.com/zhen-z/stellasora_gacha/releases/download/v1.2.1/StellaSoraGachaTool-Setup-1.2.1.exe",
+  "installer_sha256": "772eca4b10849bdc850cc1a80cc14530ceb964eb5a10d82f708bc40a4afdc68e",
+  "notes": "便携版改为带版本号的压缩包；安装版更新不再自动启动程序，避免 Windows 740 权限错误。"
 }

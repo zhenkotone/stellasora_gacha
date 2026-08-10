@@ -33,6 +33,22 @@ class AppUpdaterTests(unittest.TestCase):
             path.write_bytes(b"verified update")
             self.assertEqual(sha256_file(path), hashlib.sha256(b"verified update").hexdigest())
 
+    def test_download_suffix_follows_asset_url(self):
+        from unittest.mock import patch
+
+        from stellasora_toolkit.app_updater import AppUpdate, download_update
+
+        update = AppUpdate("1.2.1", "https://example.test/tool.zip", "a" * 64, "")
+        with tempfile.TemporaryDirectory() as directory:
+            with patch("stellasora_toolkit.app_updater.urlopen") as open_url:
+                response = open_url.return_value.__enter__.return_value
+                response.headers.get.return_value = "4"
+                response.read.side_effect = [b"data", b""]
+                with patch("stellasora_toolkit.app_updater.hashlib.sha256") as sha:
+                    sha.return_value.hexdigest.return_value = "a" * 64
+                    path = download_update(update, Path(directory))
+            self.assertEqual(path.suffix, ".zip")
+
     def test_parses_installer_asset_with_its_own_hash(self):
         update = parse_update_manifest(
             {
