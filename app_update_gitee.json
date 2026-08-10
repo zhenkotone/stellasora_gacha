@@ -1,8 +1,8 @@
 {
-  "version": "1.2.6",
-  "url": "https://gitee.com/zhen-z/stellasora_gacha/releases/download/v1.2.6/StellaSoraGachaTool-Portable-1.2.6.zip",
-  "sha256": "7fb5bc7ce2d324e0efe2ffbc4e079e341da317558c807de619193b70362e7330",
-  "installer_url": "https://gitee.com/zhen-z/stellasora_gacha/releases/download/v1.2.6/StellaSoraGachaTool-Setup-1.2.6.exe",
-  "installer_sha256": "73a9e25971df0ca11cf86ed03537b74d6e7556f5a67e6033d4cd07b80ca69b0d",
-  "notes": "五星记录区域的文字和头像缩放至 80%。"
+  "version": "1.2.7",
+  "url": "https://gitee.com/zhen-z/stellasora_gacha/releases/download/v1.2.7/StellaSoraGachaTool-Portable-1.2.7.zip",
+  "sha256": "9f0b2e58c1cde586f62876ffcdb5e4811e6ba0cc322b1d5a579579b121caa5e6",
+  "installer_url": "https://gitee.com/zhen-z/stellasora_gacha/releases/download/v1.2.7/StellaSoraGachaTool-Setup-1.2.7.exe",
+  "installer_sha256": "93ab93d36413469b01cc81743b3533d1de6e89dcf8b75322f8c9c72d76b631db",
+  "notes": "软件界面新增使用说明、数据备份提示及风险与免责声明。"
 }

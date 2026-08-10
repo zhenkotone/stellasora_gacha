@@ -51,7 +51,7 @@ WARM = "#c58b68"
 HEADER = "#607d98"
 POOL_COLORS = ("#7776aa", "#4d9ba0", "#5d82a9", "#8e6d9c")
 FIVE_STAR_AVATAR_SIZE = 70
-APP_VERSION = "1.2.6"
+APP_VERSION = "1.2.7"
 GACHA_CATEGORY_ORDER = (
     CATEGORY_TRAVELER_LIMITED,
     CATEGORY_DISC_LIMITED,
@@ -225,6 +225,7 @@ class StellaSoraApp:
         self.notebook.grid(row=2, column=0, sticky="nsew")
         self._build_five_star_tab()
         self._build_gacha_tab()
+        self._build_help_tab()
 
     def _scroll_app(self, event) -> None:
         self.app_canvas.yview_scroll(int(-event.delta / 120), "units")
@@ -299,6 +300,70 @@ class StellaSoraApp:
         self.notebook.add(tab, text="五星一览")
         self.stats_content = ttk.Frame(tab, style="App.TFrame")
         self.stats_content.grid(row=0, column=0, sticky="ew")
+
+    def _build_help_tab(self) -> None:
+        tab = ttk.Frame(self.notebook, style="Panel.TFrame", padding=(24, 20))
+        tab.columnconfigure(0, weight=1)
+        self.notebook.add(tab, text="使用说明")
+
+        wrap_labels: list[tk.Label] = []
+
+        def heading(text: str, *, warning: bool = False) -> None:
+            tk.Label(
+                tab,
+                text=text,
+                background=PANEL,
+                foreground="#b7603f" if warning else ACCENT_DARK,
+                font=("Microsoft YaHei UI", 12, "bold"),
+                anchor="w",
+            ).grid(row=tab.grid_size()[1], column=0, sticky="ew", pady=(14, 6))
+
+        def paragraph(text: str, *, muted: bool = False) -> None:
+            label = tk.Label(
+                tab,
+                text=text,
+                background=PANEL,
+                foreground=MUTED if muted else INK,
+                font=("Microsoft YaHei UI", 9),
+                justify="left",
+                anchor="nw",
+                wraplength=900,
+            )
+            label.grid(row=tab.grid_size()[1], column=0, sticky="ew", pady=2)
+            wrap_labels.append(label)
+
+        tk.Label(
+            tab,
+            text="使用说明与风险提示",
+            background=PANEL,
+            foreground=INK,
+            font=("Microsoft YaHei UI", 16, "bold"),
+            anchor="w",
+        ).grid(row=0, column=0, sticky="ew", pady=(0, 4))
+        paragraph("本工具面向《星塔旅人》国服 Windows 客户端，仅用于整理当前账号已经加载的招募历史。", muted=True)
+
+        heading("使用方法")
+        paragraph("1. 登录游戏并进入主界面，在游戏内依次打开旅人限时、秘纹限时、旅人常驻、秘纹常驻四类招募记录，等待每个记录列表显示。")
+        paragraph("2. 回到本工具点击“刷新游戏数据”。只有该功能需要管理员权限；读取完成后，五星一览和招募记录会自动更新。")
+        paragraph("3. 新角色头像缺失时点击“更新角色资源”；软件版本可通过“检查更新”进行升级。")
+
+        heading("数据与备份")
+        paragraph("每次刷新都会合并更新 exports/stellasora_gacha_archive.json。官方记录可能只保留最近半年，请定期备份该文件。")
+        paragraph("导出的 JSON/CSV 不包含进程地址、账号 ID、Cookie、SDK token 或网络会话数据。请勿公开分享可能关联个人游戏行为的归档。")
+
+        heading("风险与免责声明", warning=True)
+        paragraph("• 本项目是非官方个人研究工具，与游戏运营方、开发方不存在关联，也未获得官方认可或授权。")
+        paragraph("• 工具通过 Windows ReadProcessMemory 只读访问当前客户端已加载的招募历史；不注入 DLL、不修改游戏文件或内存、不发送游戏协议请求。上述设计不构成对账号安全、封号风险或长期可用性的保证。")
+        paragraph("• 游戏客户端、反作弊策略、服务条款及适用法律法规均可能变化。使用者应自行阅读并遵守相关条款，仅对自己的账号和设备使用，并自行评估风险。")
+        paragraph("• 因使用或无法使用本工具、数据不完整、游戏更新、账号处置或第三方服务变化造成的任何直接或间接损失，项目维护者不承担责任。")
+        paragraph("• 使用本工具即表示使用者已理解上述工作方式与风险，并自行承担使用后果。")
+
+        def update_wrap(event) -> None:
+            wraplength = max(420, event.width - 48)
+            for label in wrap_labels:
+                label.configure(wraplength=wraplength)
+
+        tab.bind("<Configure>", update_wrap)
 
     def _fill_five_star_stats(self) -> None:
         for child in self.stats_content.winfo_children():
