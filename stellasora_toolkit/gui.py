@@ -4,6 +4,7 @@ import argparse
 import json
 import os
 import queue
+import shutil
 import subprocess
 import sys
 import threading
@@ -27,7 +28,7 @@ from .catalog import (
     traveler_name,
 )
 from .resource_manager import DEFAULT_MANIFEST_URL, update_resources
-from .service import Snapshot, extract_snapshot, load_latest_snapshot
+from .service import ARCHIVE_FILENAME, Snapshot, extract_snapshot, load_latest_snapshot
 from .gacha_stats import (
     CATEGORY_DISC_LIMITED,
     CATEGORY_DISC_STANDARD,
@@ -35,6 +36,7 @@ from .gacha_stats import (
     CATEGORY_TRAVELER_STANDARD,
     PoolStats,
     build_category_stat,
+    build_banner_stats_with_shared_pity,
     build_pool_stats,
     classify_history_category,
 )
@@ -51,7 +53,8 @@ WARM = "#c58b68"
 HEADER = "#607d98"
 POOL_COLORS = ("#7776aa", "#4d9ba0", "#5d82a9", "#8e6d9c")
 FIVE_STAR_AVATAR_SIZE = 70
-APP_VERSION = "1.2.7"
+FIVE_STAR_TILE_IMAGE_SIZE = 78
+APP_VERSION = "1.2.8"
 GACHA_CATEGORY_ORDER = (
     CATEGORY_TRAVELER_LIMITED,
     CATEGORY_DISC_LIMITED,
@@ -63,6 +66,22 @@ GACHA_CATEGORY_NAMES = {
     CATEGORY_DISC_LIMITED: "秘纹限时招募",
     CATEGORY_TRAVELER_STANDARD: "旅人常驻招募",
     CATEGORY_DISC_STANDARD: "秘纹常驻招募",
+}
+OFFICIAL_LIMITED_POOL_INFO = {
+    10143: ("划破黑暗的银枪", "2026-02-24", "2026-03-17", "风影"),
+    20143: ("春日暖阳梦微醺", "2026-02-24", "2026-03-17", "春日纪事"),
+    10130: ("篇篇心意 准点送递", "2026-03-17", "2026-04-07", "多娜"),
+    20130: ("随愿启航的幸福气球", "2026-03-17", "2026-04-07", "飞越青空"),
+    10145: ("夜樱尽头暗月沉", "2026-04-16", "2026-05-08", "乙叶"),
+    20145: ("百合芬香伴烟起", "2026-04-16", "2026-05-08", "繁花幻梦"),
+    10115: ("乘光而起的星之砂", "2026-05-14", "2026-06-02", "火垂"),
+    20115: ("若能触及那片繁星", "2026-05-14", "2026-06-02", "星之所向"),
+    10140: ("完美无缺的最终解", "2026-06-02", "2026-06-23", "斯帕克拉"),
+    20140: ("奇思妙想，寄于手作", "2026-06-02", "2026-06-23", "微小的乐园"),
+    10160: ("下水之前别忘热身！", "2026-07-21", "2026-08-11", "薇洛(盛夏)"),
+    20160: ("波光荡漾，轻触的指尖", "2026-07-21", "2026-08-11", "浮光掠影"),
+    11133: ("摇曳轻风纯情香", "2026-08-04", "2026-08-25", "夏花"),
+    21133: ("午后微光、共入翠梦", "2026-08-04", "2026-08-25", "鹿鸣"),
 }
 
 
@@ -87,7 +106,10 @@ class StellaSoraApp:
         self.gacha_rows: dict[str, dict] = {}
         self.emblem_rows: dict[str, dict] = {}
         self.avatar_images: list[ImageTk.PhotoImage] = []
+        self.gacha_avatar_images: list[ImageTk.PhotoImage] = []
         self.pool_columns = tk.IntVar(value=self._load_pool_columns())
+        self.gacha_page = 1
+        self.gacha_grid_columns = 0
         self.busy = False
         self.update_checking = False
 
@@ -205,12 +227,14 @@ class StellaSoraApp:
 
         metrics = ttk.Frame(body, style="App.TFrame")
         metrics.grid(row=0, column=0, sticky="ew")
-        for column in range(4):
+        for column in range(6):
             metrics.columnconfigure(column, weight=1, uniform="metric")
-        self.metric_groups = self._metric(metrics, 0, "招募分类", "#7776aa")
-        self.metric_pulls = self._metric(metrics, 1, "抽取结果", "#4d9ba0")
-        self.metric_emblems = self._metric(metrics, 2, "五星记录", "#5d82a9")
-        self.metric_characters = self._metric(metrics, 3, "归档组数", "#8e6d9c")
+        self.metric_pulls = self._metric(metrics, 0, "累计抽取", "#4d9ba0", 6)
+        self.metric_five_stars = self._metric(metrics, 1, "五星记录", "#c58b68", 6)
+        self.metric_rate = self._metric(metrics, 2, "五星概率", "#7776aa", 6)
+        self.metric_average = self._metric(metrics, 3, "平均五星抽数", "#8e6d9c", 6)
+        self.metric_groups = self._metric(metrics, 4, "已加载分类", "#5d82a9", 6)
+        self.metric_batches = self._metric(metrics, 5, "归档批次", "#476d8b", 6)
 
         status_row = ttk.Frame(body, style="App.TFrame")
         status_row.grid(row=1, column=0, sticky="ew", pady=(13, 10))
@@ -223,16 +247,17 @@ class StellaSoraApp:
 
         self.notebook = ttk.Notebook(body)
         self.notebook.grid(row=2, column=0, sticky="nsew")
-        self._build_five_star_tab()
+        self._build_home_tab()
         self._build_gacha_tab()
+        self._build_settings_tab()
         self._build_help_tab()
 
     def _scroll_app(self, event) -> None:
         self.app_canvas.yview_scroll(int(-event.delta / 120), "units")
 
-    def _metric(self, parent: ttk.Frame, column: int, name: str, color: str) -> tk.StringVar:
+    def _metric(self, parent: ttk.Frame, column: int, name: str, color: str, count: int) -> tk.StringVar:
         frame = ttk.Frame(parent, style="Panel.TFrame", padding=(16, 12))
-        frame.grid(row=0, column=column, sticky="ew", padx=(0 if column == 0 else 5, 0 if column == 3 else 5))
+        frame.grid(row=0, column=column, sticky="ew", padx=(0 if column == 0 else 5, 0 if column == count - 1 else 5))
         strip = tk.Frame(frame, width=4, height=48, bg=color)
         strip.pack(side="left", fill="y", padx=(0, 12))
         content = ttk.Frame(frame, style="Panel.TFrame")
@@ -242,64 +267,105 @@ class StellaSoraApp:
         ttk.Label(content, text=name, style="MetricName.TLabel").pack(anchor="w")
         return value
 
-    def _toolbar(self, parent: ttk.Frame, variable: tk.StringVar, callback) -> ttk.Frame:
-        bar = ttk.Frame(parent, style="Panel.TFrame", padding=(12, 10))
-        ttk.Label(bar, text="筛选", background=PANEL, foreground=MUTED).pack(side="left", padx=(0, 8))
-        entry = ttk.Entry(bar, textvariable=variable, width=34)
-        entry.pack(side="left")
-        variable.trace_add("write", lambda *_args: callback())
-        return bar
-
     def _build_gacha_tab(self) -> None:
         tab = ttk.Frame(self.notebook, style="Panel.TFrame")
-        tab.columnconfigure(0, weight=1)
-        tab.rowconfigure(2, weight=1)
+        tab.columnconfigure(1, weight=1)
         self.notebook.add(tab, text="招募记录")
-        self.gacha_filter = tk.StringVar()
-        self._toolbar(tab, self.gacha_filter, self._fill_gacha).grid(row=0, column=0, sticky="ew")
-        header = tk.Frame(tab, background="#e4edf5", height=34)
-        header.grid(row=1, column=0, sticky="ew")
-        header.grid_propagate(False)
-        headers = ("时间", "记录 ID", "类型", "数量", "结果")
-        widths = (170, 110, 80, 65)
-        for column, text in enumerate(headers):
-            if column < len(widths):
-                header.grid_columnconfigure(column, minsize=widths[column])
-            else:
-                header.grid_columnconfigure(column, weight=1)
-            tk.Label(
-                header,
-                text=text,
-                background="#e4edf5",
-                foreground=INK,
-                font=("Microsoft YaHei UI", 9, "bold"),
-                anchor="w",
-                padx=8,
-            ).grid(row=0, column=column, sticky="nsew")
 
-        self.gacha_canvas = tk.Canvas(tab, background=PANEL, highlightthickness=0, borderwidth=0)
-        scroll = ttk.Scrollbar(tab, orient="vertical", command=self.gacha_canvas.yview)
-        self.gacha_canvas.configure(yscrollcommand=scroll.set)
-        self.gacha_canvas.grid(row=2, column=0, sticky="nsew")
-        scroll.grid(row=2, column=1, sticky="ns")
-        self.gacha_rows_content = tk.Frame(self.gacha_canvas, background=PANEL)
-        self.gacha_rows_window = self.gacha_canvas.create_window((0, 0), window=self.gacha_rows_content, anchor="nw")
-        self.gacha_rows_content.bind(
-            "<Configure>",
-            lambda _event: self.gacha_canvas.configure(scrollregion=self.gacha_canvas.bbox("all")),
-        )
-        self.gacha_canvas.bind(
-            "<Configure>",
-            lambda event: self.gacha_canvas.itemconfigure(self.gacha_rows_window, width=event.width),
-        )
+        sidebar = tk.Frame(tab, background="#edf3f7", width=220)
+        sidebar.grid(row=0, column=0, sticky="nsw")
+        sidebar.grid_propagate(False)
+        tk.Label(
+            sidebar,
+            text="招募记录",
+            background="#edf3f7",
+            foreground=INK,
+            font=("Microsoft YaHei UI", 14, "bold"),
+            anchor="w",
+        ).pack(fill="x", padx=16, pady=(16, 2))
+        self.gacha_sidebar_summary = tk.StringVar(value="等待加载本地归档")
+        tk.Label(
+            sidebar,
+            textvariable=self.gacha_sidebar_summary,
+            background="#edf3f7",
+            foreground=MUTED,
+            font=("Microsoft YaHei UI", 8),
+            justify="left",
+            anchor="w",
+            wraplength=184,
+        ).pack(fill="x", padx=16, pady=(0, 14))
+        self.gacha_filter_sidebar = tk.Frame(sidebar, background="#edf3f7")
+        self.gacha_filter_sidebar.pack(fill="x", padx=10)
 
-    def _build_five_star_tab(self) -> None:
+        content = ttk.Frame(tab, style="Panel.TFrame", padding=(18, 16, 18, 18))
+        content.grid(row=0, column=1, sticky="new")
+        content.columnconfigure(0, weight=1)
+        self.gacha_category_filter = tk.StringVar(value="all")
+
+        heading = tk.Frame(content, background=PANEL)
+        heading.grid(row=0, column=0, sticky="ew", pady=(0, 12))
+        tk.Label(
+            heading,
+            text="五星招募记录",
+            background=PANEL,
+            foreground=INK,
+            font=("Microsoft YaHei UI", 13, "bold"),
+        ).pack(side="left")
+        tk.Label(
+            heading,
+            text="限时池五星间隔按同类卡池继承计算 · 常驻池独立计算 · 卡片右侧为该池抽数",
+            background=PANEL,
+            foreground=MUTED,
+            font=("Microsoft YaHei UI", 8),
+        ).pack(side="right")
+
+        self.gacha_rows_content = tk.Frame(content, background=PANEL)
+        self.gacha_rows_content.grid(row=1, column=0, sticky="new")
+        self.gacha_rows_content.grid_columnconfigure(0, weight=1)
+
+    def _build_home_tab(self) -> None:
         tab = ttk.Frame(self.notebook, style="Panel.TFrame")
         tab.columnconfigure(0, weight=1)
-        tab.rowconfigure(0, weight=1)
-        self.notebook.add(tab, text="五星一览")
+        self.notebook.add(tab, text="首页")
         self.stats_content = ttk.Frame(tab, style="App.TFrame")
-        self.stats_content.grid(row=0, column=0, sticky="ew")
+        self.stats_content.grid(row=0, column=0, sticky="new")
+
+    def _build_settings_tab(self) -> None:
+        tab = ttk.Frame(self.notebook, style="Panel.TFrame", padding=(24, 20))
+        tab.columnconfigure(0, weight=1)
+        tab.columnconfigure(1, weight=1)
+        self.notebook.add(tab, text="设置")
+
+        tk.Label(tab, text="设置", background=PANEL, foreground=INK, font=("Microsoft YaHei UI", 16, "bold")).grid(
+            row=0, column=0, columnspan=2, sticky="w"
+        )
+        tk.Label(tab, text="管理本地归档、备份与软件资源", background=PANEL, foreground=MUTED, font=("Microsoft YaHei UI", 9)).grid(
+            row=1, column=0, columnspan=2, sticky="w", pady=(2, 18)
+        )
+
+        archive_panel = tk.Frame(tab, background="#f4f8fb", highlightbackground=LINE, highlightthickness=1)
+        archive_panel.grid(row=2, column=0, sticky="nsew", padx=(0, 8))
+        data_panel = tk.Frame(tab, background="#f4f8fb", highlightbackground=LINE, highlightthickness=1)
+        data_panel.grid(row=2, column=1, sticky="nsew", padx=(8, 0))
+        self.settings_archive_path = tk.StringVar(value=str(self.output_dir / ARCHIVE_FILENAME))
+        self.settings_summary = tk.StringVar(value="尚未加载本地归档")
+
+        tk.Label(archive_panel, text="本地归档", background="#f4f8fb", foreground=INK, font=("Microsoft YaHei UI", 12, "bold")).pack(anchor="w", padx=16, pady=(16, 4))
+        tk.Label(archive_panel, text="招募历史会合并保存在此文件中。", background="#f4f8fb", foreground=MUTED).pack(anchor="w", padx=16)
+        tk.Label(archive_panel, textvariable=self.settings_archive_path, background="#f4f8fb", foreground=ACCENT_DARK, justify="left", anchor="w", wraplength=400).pack(fill="x", padx=16, pady=(16, 14))
+        actions = tk.Frame(archive_panel, background="#f4f8fb")
+        actions.pack(anchor="w", padx=16, pady=(0, 16))
+        ttk.Button(actions, text="打开目录", command=self._open_exports).pack(side="left", padx=(0, 8))
+        ttk.Button(actions, text="复制路径", command=self._copy_archive_path).pack(side="left", padx=(0, 8))
+        ttk.Button(actions, text="创建备份", style="Accent.TButton", command=self._backup_archive).pack(side="left")
+
+        tk.Label(data_panel, text="本地数据", background="#f4f8fb", foreground=INK, font=("Microsoft YaHei UI", 12, "bold")).pack(anchor="w", padx=16, pady=(16, 4))
+        tk.Label(data_panel, textvariable=self.settings_summary, background="#f4f8fb", foreground=MUTED, justify="left", anchor="w", wraplength=400).pack(fill="x", padx=16, pady=(0, 14))
+        tk.Label(data_panel, text="资源与软件更新", background="#f4f8fb", foreground=INK, font=("Microsoft YaHei UI", 10, "bold")).pack(anchor="w", padx=16, pady=(4, 6))
+        settings_actions = tk.Frame(data_panel, background="#f4f8fb")
+        settings_actions.pack(anchor="w", padx=16, pady=(0, 16))
+        ttk.Button(settings_actions, text="更新角色资源", command=self.update_resources).pack(side="left", padx=(0, 8))
+        ttk.Button(settings_actions, text="检查软件更新", command=self.check_app_update).pack(side="left")
 
     def _build_help_tab(self) -> None:
         tab = ttk.Frame(self.notebook, style="Panel.TFrame", padding=(24, 20))
@@ -365,30 +431,37 @@ class StellaSoraApp:
 
         tab.bind("<Configure>", update_wrap)
 
+    def _semantic_gacha_categories(self) -> dict[str, list[dict]]:
+        if self.snapshot is None:
+            return {}
+        categories = self.snapshot.gacha_categories or {1: self.snapshot.gacha}
+        semantic_categories: dict[str, list[dict]] = {}
+        for groups in categories.values():
+            category = classify_history_category(groups)
+            semantic_categories.setdefault(category, []).extend(groups)
+        return semantic_categories
+
     def _fill_five_star_stats(self) -> None:
         for child in self.stats_content.winfo_children():
             child.destroy()
         self.avatar_images.clear()
         if self.snapshot is None:
             return
-        categories = self.snapshot.gacha_categories or {1: self.snapshot.gacha}
-        semantic_categories: dict[str, list[dict]] = {}
-        for groups in categories.values():
-            category = classify_history_category(groups)
-            semantic_categories.setdefault(category, []).extend(groups)
-        total_five = sum(
-            len(pool.five_stars)
-            for category, groups in semantic_categories.items()
-            if category in GACHA_CATEGORY_NAMES
-            for pool in build_pool_stats(groups)
-        )
+        semantic_categories = self._semantic_gacha_categories()
+        stats_by_category = {
+            category: build_category_stat(semantic_categories.get(category, []))
+            for category in GACHA_CATEGORY_ORDER
+        }
+        total_five = sum(len(stat.five_stars) for stat in stats_by_category.values() if stat is not None)
         loaded_count = sum(category in semantic_categories for category in GACHA_CATEGORY_ORDER)
+
+        self._build_home_summary(stats_by_category)
 
         intro = ttk.Frame(self.stats_content, style="Panel.TFrame", padding=(14, 11))
         intro.pack(fill="x", padx=12, pady=(12, 8))
         ttk.Label(
             intro,
-            text=f"五星记录  {total_five}",
+            text=f"四类卡池详情 · 五星记录 {total_five}",
             background=PANEL,
             foreground=INK,
             font=("Microsoft YaHei UI", 11, "bold"),
@@ -419,10 +492,6 @@ class StellaSoraApp:
             style="FiveStarLayout.TRadiobutton",
         ).pack(side="left")
 
-        stats_by_category = {
-            category: build_category_stat(semantic_categories.get(category, []))
-            for category in GACHA_CATEGORY_ORDER
-        }
         pool_grid = ttk.Frame(self.stats_content, style="App.TFrame")
         pool_grid.pack(fill="x", padx=12, pady=(2, 8))
         grid_columns = self.pool_columns.get()
@@ -447,6 +516,82 @@ class StellaSoraApp:
                 continue
             self._build_pool_section(category_stat, POOL_COLORS[color_index % len(POOL_COLORS)], name, panel)
             color_index += 1
+
+    def _build_home_summary(self, stats_by_category: dict[str, PoolStats | None]) -> None:
+        summary = ttk.Frame(self.stats_content, style="App.TFrame")
+        summary.pack(fill="x", padx=12, pady=(12, 0))
+        summary.columnconfigure(0, weight=3)
+        summary.columnconfigure(1, weight=2)
+
+        pity_panel = tk.Frame(summary, background=PANEL, highlightbackground=LINE, highlightthickness=1)
+        pity_panel.grid(row=0, column=0, sticky="nsew", padx=(0, 6))
+        recent_panel = tk.Frame(summary, background=PANEL, highlightbackground=LINE, highlightthickness=1)
+        recent_panel.grid(row=0, column=1, sticky="nsew", padx=(6, 0))
+
+        tk.Label(
+            pity_panel,
+            text="当前垫抽",
+            background=PANEL,
+            foreground=INK,
+            font=("Microsoft YaHei UI", 12, "bold"),
+        ).pack(anchor="w", padx=16, pady=(14, 2))
+        tk.Label(
+            pity_panel,
+            text="各类卡池独立统计，以当前本地归档为准。",
+            background=PANEL,
+            foreground=MUTED,
+            font=("Microsoft YaHei UI", 8),
+        ).pack(anchor="w", padx=16, pady=(0, 10))
+        for category in GACHA_CATEGORY_ORDER:
+            stat = stats_by_category.get(category)
+            row = tk.Frame(pity_panel, background=PANEL)
+            row.pack(fill="x", padx=16, pady=(0, 10))
+            title = GACHA_CATEGORY_NAMES[category]
+            if stat is None:
+                tk.Label(row, text=title, background=PANEL, foreground=MUTED, font=("Microsoft YaHei UI", 9)).pack(anchor="w")
+                tk.Label(row, text="尚未加载", background=PANEL, foreground=WARM, font=("Microsoft YaHei UI", 8)).pack(anchor="e")
+                continue
+            top = tk.Frame(row, background=PANEL)
+            top.pack(fill="x")
+            tk.Label(top, text=title, background=PANEL, foreground=INK, font=("Microsoft YaHei UI", 9, "bold")).pack(side="left")
+            tk.Label(top, text=f"{stat.current_pity} 抽垫抽", background=PANEL, foreground=ACCENT_DARK, font=("Microsoft YaHei UI", 9, "bold")).pack(side="right")
+            progress = ttk.Progressbar(row, mode="determinate", maximum=80, value=min(stat.current_pity, 80), length=280)
+            progress.pack(anchor="w", pady=(5, 0))
+
+        tk.Label(
+            recent_panel,
+            text="最近五星",
+            background=PANEL,
+            foreground=INK,
+            font=("Microsoft YaHei UI", 12, "bold"),
+        ).pack(anchor="w", padx=16, pady=(14, 8))
+        recent: list[tuple[int, str, Any]] = []
+        for category, stat in stats_by_category.items():
+            if stat is None:
+                continue
+            recent.extend((pull.timestamp, category, pull) for pull in stat.five_stars)
+        recent.sort(key=lambda item: item[0], reverse=True)
+        if not recent:
+            tk.Label(recent_panel, text="暂无五星记录", background=PANEL, foreground=MUTED, font=("Microsoft YaHei UI", 9)).pack(
+                anchor="w", padx=16, pady=(0, 16)
+            )
+        for timestamp, category, pull in recent[:5]:
+            row = tk.Frame(recent_panel, background=PANEL)
+            row.pack(fill="x", padx=16, pady=(0, 8))
+            photo = self._avatar_photo(pull.item_id, pull.kind, POOL_COLORS[GACHA_CATEGORY_ORDER.index(category)])
+            self.avatar_images.append(photo)
+            tk.Label(row, image=photo, background=PANEL, borderwidth=0).pack(side="left")
+            text = tk.Frame(row, background=PANEL)
+            text.pack(side="left", fill="x", expand=True, padx=(8, 0))
+            tk.Label(text, text=pull.name, background=PANEL, foreground="#d87822", font=("Microsoft YaHei UI", 9, "bold"), anchor="w").pack(fill="x")
+            tk.Label(
+                text,
+                text=f"{GACHA_CATEGORY_NAMES[category]} · {self._format_date(timestamp)} · {pull.pity} 抽",
+                background=PANEL,
+                foreground=MUTED,
+                font=("Microsoft YaHei UI", 8),
+                anchor="w",
+            ).pack(fill="x")
 
     def _refresh_pool_layout(self) -> None:
         self._save_pool_columns()
@@ -556,38 +701,41 @@ class StellaSoraApp:
 
         def render_tiles(_event=None) -> None:
             nonlocal last_columns
-            columns = max(1, hits.winfo_width() // 115)
+            columns = max(1, hits.winfo_width() // 92)
             if columns == last_columns and hits.winfo_children():
                 return
             last_columns = columns
             for child in hits.winfo_children():
                 child.destroy()
             for index, pull in enumerate(pool.five_stars):
-                tile = tk.Frame(hits, background=PANEL, width=101, height=102)
-                tile.grid(row=index // columns, column=index % columns, padx=7, pady=4, sticky="nw")
+                tile = tk.Frame(hits, background=PANEL, width=82, height=100)
+                tile.grid(row=index // columns, column=index % columns, padx=5, pady=5, sticky="nw")
                 tile.grid_propagate(False)
-                photo = self._avatar_photo(pull.item_id, pull.kind, color)
+                photo = self._square_avatar_photo(pull.item_id, pull.kind, color)
                 self.avatar_images.append(photo)
                 tk.Label(tile, image=photo, background=PANEL, borderwidth=0).place(
-                    x=15, y=0, width=FIVE_STAR_AVATAR_SIZE, height=FIVE_STAR_AVATAR_SIZE
+                    x=2, y=0, width=FIVE_STAR_TILE_IMAGE_SIZE, height=FIVE_STAR_TILE_IMAGE_SIZE
                 )
+                official_pool = OFFICIAL_LIMITED_POOL_INFO.get(pull.gid)
+                if official_pool is not None:
+                    is_up = self._same_item_name(pull.name, official_pool[3])
+                    tk.Label(
+                        tile,
+                        text="UP" if is_up else "歪",
+                        background="#25282d" if is_up else "#c7514a",
+                        foreground="#ffffff",
+                        font=("Microsoft YaHei UI", 7, "bold"),
+                        padx=4,
+                        pady=1,
+                    ).place(x=78, y=2, anchor="ne")
                 badge_color = "#4d9ba0" if pull.pity <= 30 else WARM if pull.pity <= 60 else "#b97a8a"
                 tk.Label(
                     tile,
-                    text=f"{pull.pity} 抽",
+                    text=str(pull.pity),
                     background=badge_color,
                     foreground="#ffffff",
-                    font=("Microsoft YaHei UI", 7, "bold"),
-                    padx=6,
-                    pady=2,
-                ).place(x=49, y=53)
-                tk.Label(
-                    tile,
-                    text=pull.name,
-                    background="#f8fbfe",
-                    foreground=INK,
-                    font=("Microsoft YaHei UI", 7),
-                ).place(x=5, y=78, width=91, height=20)
+                    font=("Microsoft YaHei UI", 10, "bold"),
+                ).place(x=2, y=78, width=FIVE_STAR_TILE_IMAGE_SIZE, height=22)
 
         hits.bind("<Configure>", render_tiles)
         self.root.after_idle(render_tiles)
@@ -644,6 +792,28 @@ class StellaSoraApp:
         draw = ImageDraw.Draw(canvas)
         draw.ellipse((0, 0, size - 1, size - 1), fill=border_color)
         canvas.alpha_composite(source, (3, 3))
+        return ImageTk.PhotoImage(canvas)
+
+    def _square_avatar_photo(
+        self,
+        item_id: int,
+        kind: str,
+        border_color: str,
+        *,
+        size: int = FIVE_STAR_TILE_IMAGE_SIZE,
+    ) -> ImageTk.PhotoImage:
+        folder = "travelers" if kind == "traveler" else "discs"
+        resource_root = Path(getattr(sys, "_MEIPASS", Path(__file__).resolve().parent.parent))
+        external_path = self.output_dir / "assets" / folder / f"{item_id}.png"
+        path = external_path if external_path.exists() else resource_root / "assets" / folder / f"{item_id}.png"
+        try:
+            source = Image.open(path).convert("RGBA")
+            source = ImageOps.fit(source, (size - 4, size - 4), method=Image.Resampling.LANCZOS)
+        except OSError:
+            source = Image.new("RGBA", (size - 4, size - 4), "#dbe6ef")
+            ImageDraw.Draw(source).text((10, 28), str(item_id), fill=INK)
+        canvas = Image.new("RGBA", (size, size), border_color)
+        canvas.alpha_composite(source, (2, 2))
         return ImageTk.PhotoImage(canvas)
 
     def _build_emblem_tab(self) -> None:
@@ -902,15 +1072,42 @@ class StellaSoraApp:
 
     def _apply_snapshot(self, snapshot: Snapshot) -> None:
         self.snapshot = snapshot
-        categories = snapshot.gacha_categories or {1: snapshot.gacha}
-        loaded_categories = sum(
-            classify_history_category(groups) in GACHA_CATEGORY_NAMES for groups in categories.values()
-        )
+        semantic_categories = self._semantic_gacha_categories()
+        category_stats = {
+            category: build_category_stat(semantic_categories.get(category, []))
+            for category in GACHA_CATEGORY_ORDER
+        }
+        loaded_categories = sum(category in semantic_categories for category in GACHA_CATEGORY_ORDER)
+        total_five_stars = sum(len(stat.five_stars) for stat in category_stats.values() if stat is not None)
+        total_pulls = sum(stat.total_pulls for stat in category_stats.values() if stat is not None)
         self.metric_groups.set(str(loaded_categories))
-        self.metric_pulls.set(str(snapshot.pull_count))
-        categories = snapshot.gacha_categories or {1: snapshot.gacha}
-        self.metric_emblems.set(str(sum(len(build_category_stat(groups).five_stars) for groups in categories.values() if build_category_stat(groups))))
-        self.metric_characters.set(str(len(snapshot.gacha)))
+        self.metric_pulls.set(str(total_pulls))
+        self.metric_five_stars.set(str(total_five_stars))
+        self.metric_rate.set(f"{total_five_stars / total_pulls * 100:.2f}%" if total_pulls else "-")
+        self.metric_average.set(str(round(total_pulls / total_five_stars)) if total_five_stars else "-")
+        self.metric_batches.set(str(len(snapshot.gacha)))
+
+        timestamps = []
+        for group in snapshot.gacha:
+            try:
+                timestamp = int(group.get("Time") or 0)
+            except (TypeError, ValueError):
+                continue
+            if timestamp:
+                timestamps.append(timestamp)
+        if timestamps:
+            date_range = (
+                f"{datetime.fromtimestamp(min(timestamps)):%Y-%m-%d} 至 "
+                f"{datetime.fromtimestamp(max(timestamps)):%Y-%m-%d}"
+            )
+        else:
+            date_range = "暂无有效时间"
+        self.settings_summary.set(
+            f"{total_pulls} 抽 · {total_five_stars} 个五星\n"
+            f"{date_range}\n归档批次 {len(snapshot.gacha)}"
+        )
+        self.gacha_sidebar_summary.set(f"{total_pulls} 抽 · {total_five_stars} 个五星\n已加载 {loaded_categories}/4 类卡池")
+        self._refresh_gacha_sidebar()
         self._fill_five_star_stats()
         self._fill_gacha()
 
@@ -931,35 +1128,223 @@ class StellaSoraApp:
 
         return as_int(group.get("Time")), as_int(group.get("Gid"))
 
+    def _reset_gacha_page(self) -> None:
+        self._fill_gacha()
+
+    def _change_gacha_page(self, delta: int) -> None:
+        del delta
+
+    def _resize_gacha_canvas(self, event: tk.Event) -> None:
+        del event
+
+    def _select_gacha_category(self, category: str) -> None:
+        self.gacha_category_filter.set(category)
+        self._refresh_gacha_sidebar()
+        self._reset_gacha_page()
+
+    def _refresh_gacha_sidebar(self) -> None:
+        if not hasattr(self, "gacha_filter_sidebar"):
+            return
+        for child in self.gacha_filter_sidebar.winfo_children():
+            child.destroy()
+        semantic_categories = self._semantic_gacha_categories()
+        selected = self.gacha_category_filter.get()
+        filters = [("all", "全部卡池", None)]
+        filters.extend(
+            (category, GACHA_CATEGORY_NAMES[category], build_category_stat(semantic_categories.get(category, [])))
+            for category in GACHA_CATEGORY_ORDER
+        )
+        for category, name, stat in filters:
+            active = selected == category
+            if category == "all":
+                five_stars = sum(len(pool.five_stars) for groups in semantic_categories.values() for pool in build_banner_stats_with_shared_pity(groups))
+                detail = f"{five_stars} 个五星记录"
+            elif stat is None:
+                detail = "尚未加载"
+            else:
+                detail = f"当前 {stat.current_pity} 抽 · 共 {stat.total_pulls} 抽"
+            button = tk.Button(
+                self.gacha_filter_sidebar,
+                text=f"{name}\n{detail}",
+                command=lambda value=category: self._select_gacha_category(value),
+                background="#dce9f2" if active else "#edf3f7",
+                activebackground="#d3e3ee",
+                foreground=ACCENT_DARK if active else INK,
+                font=("Microsoft YaHei UI", 9, "bold" if active else "normal"),
+                justify="left",
+                anchor="w",
+                relief="flat",
+                borderwidth=0,
+                padx=10,
+                pady=8,
+                cursor="hand2",
+            )
+            button.pack(fill="x", pady=2)
+
     def _fill_gacha(self) -> None:
         if not hasattr(self, "gacha_rows_content"):
             return
         for child in self.gacha_rows_content.winfo_children():
             child.destroy()
         self.gacha_rows.clear()
+        self.gacha_avatar_images.clear()
         if self.snapshot is None:
             return
-        needle = self.gacha_filter.get().strip().casefold()
-        visible_groups: list[dict] = []
-        for group in sorted(self.snapshot.gacha, key=self._gacha_sort_key, reverse=True):
-            ids = group.get("Ids", [])
-            names = [gacha_item_name(value) for value in ids]
-            haystack = " ".join([str(group.get("Gid", "")), *names]).casefold()
-            if needle and needle not in haystack:
+        semantic_categories = self._semantic_gacha_categories()
+        category_filter = self.gacha_category_filter.get()
+        categories = (
+            GACHA_CATEGORY_ORDER
+            if category_filter == "all"
+            else (category_filter,)
+        )
+        row = 0
+        for category in categories:
+            groups = semantic_categories.get(category, [])
+            if not groups:
                 continue
-            visible_groups.append(group)
-        if not visible_groups:
-            tk.Label(
-                self.gacha_rows_content,
-                text="没有匹配的招募记录",
-                background=PANEL,
-                foreground=MUTED,
-                padx=12,
-                pady=16,
-            ).pack(anchor="w")
+            pools = build_banner_stats_with_shared_pity(groups)
+            pools_with_five_stars = [pool for pool in pools if pool.five_stars]
+            if not pools_with_five_stars:
+                continue
+            self._add_gacha_category_heading(row, category, len(pools_with_five_stars))
+            row += 1
+            for pool in pools_with_five_stars:
+                self._add_five_star_banner_card(row, category, pool)
+                row += 1
+        if row:
             return
-        for index, group in enumerate(visible_groups):
-            self._add_gacha_row(index, group)
+        tk.Label(
+            self.gacha_rows_content,
+            text="当前筛选范围内暂无五星记录",
+            background=PANEL,
+            foreground=MUTED,
+            padx=12,
+            pady=24,
+        ).grid(row=0, column=0, sticky="w")
+
+    def _add_gacha_category_heading(self, row: int, category: str, banner_count: int) -> None:
+        heading = tk.Frame(self.gacha_rows_content, background=BG)
+        heading.grid(row=row, column=0, sticky="ew", pady=(0, 7 if row == 0 else 8))
+        tk.Label(
+            heading,
+            text=GACHA_CATEGORY_NAMES[category],
+            background=BG,
+            foreground=ACCENT_DARK,
+            font=("Microsoft YaHei UI", 10, "bold"),
+        ).pack(side="left")
+        tk.Label(
+            heading,
+            text=f"{banner_count} 个含五星记录的卡池",
+            background=BG,
+            foreground=MUTED,
+            font=("Microsoft YaHei UI", 8),
+        ).pack(side="right")
+
+    def _add_five_star_banner_card(self, row: int, category: str, pool: PoolStats) -> None:
+        color = POOL_COLORS[GACHA_CATEGORY_ORDER.index(category)]
+        official_pool = OFFICIAL_LIMITED_POOL_INFO.get(pool.gid)
+        standard_pool_name = {
+            1: "旅人常驻招募",
+            2: "秘纹常驻招募",
+        }.get(pool.gid)
+        card = tk.Frame(self.gacha_rows_content, background="#f4f8fb", highlightbackground=LINE, highlightthickness=1)
+        card.grid(row=row, column=0, sticky="ew", pady=(0, 10))
+        card.grid_columnconfigure(0, weight=1)
+        header = tk.Frame(card, background="#f4f8fb")
+        header.grid(row=0, column=0, sticky="ew", padx=16, pady=(13, 9))
+        header.grid_columnconfigure(0, weight=1)
+        title = tk.Frame(header, background="#f4f8fb")
+        title.grid(row=0, column=0, sticky="w")
+        tk.Label(
+            title,
+            text=official_pool[0] if official_pool is not None else standard_pool_name or f"卡池 {pool.gid}",
+            background="#f4f8fb",
+            foreground=INK,
+            font=("Microsoft YaHei UI", 12, "bold"),
+        ).pack(anchor="w")
+        tk.Label(
+            title,
+            text=(
+                f"{official_pool[1]} - {official_pool[2]} · ID {pool.gid}"
+                if official_pool is not None
+                else f"{self._format_date(pool.start_time)} - {self._format_date(pool.end_time)}"
+            ),
+            background="#f4f8fb",
+            foreground=MUTED,
+            font=("Microsoft YaHei UI", 8),
+        ).pack(anchor="w", pady=(3, 0))
+        total_color = "#3f72cf"
+        total = tk.Frame(header, background=total_color, width=72, height=56)
+        total.grid(row=0, column=1, rowspan=2, sticky="e")
+        total.grid_propagate(False)
+        tk.Label(
+            total,
+            text=f"{pool.total_pulls}抽",
+            background=total_color,
+            foreground="#ffffff",
+            font=("Microsoft YaHei UI", 14, "bold"),
+        ).pack(expand=True)
+        tk.Frame(card, background=LINE, height=1).grid(row=1, column=0, sticky="ew", padx=16)
+        hits = tk.Frame(card, background="#f4f8fb")
+        hits.grid(row=2, column=0, sticky="ew", padx=16, pady=(9, 12))
+        hits.grid_columnconfigure(0, weight=1)
+        for index, pull in enumerate(pool.five_stars):
+            item_row = tk.Frame(hits, background="#f4f8fb")
+            item_row.grid(row=index, column=0, sticky="ew", pady=4)
+            item_row.grid_columnconfigure(1, weight=1)
+            photo = self._square_avatar_photo(pull.item_id, pull.kind, color, size=64)
+            self.gacha_avatar_images.append(photo)
+            image_box = tk.Frame(item_row, background="#f4f8fb", width=64, height=64)
+            image_box.grid(row=0, column=0, padx=(0, 10))
+            image_box.grid_propagate(False)
+            tk.Label(image_box, image=photo, background="#f4f8fb", borderwidth=0).place(x=0, y=0, width=64, height=64)
+            if official_pool is not None:
+                is_up = self._same_item_name(pull.name, official_pool[3])
+                tk.Label(
+                    image_box,
+                    text="UP" if is_up else "歪",
+                    background="#25282d" if is_up else "#c7514a",
+                    foreground="#ffffff",
+                    font=("Microsoft YaHei UI", 7, "bold"),
+                    padx=4,
+                    pady=1,
+                ).place(relx=1.0, x=-2, y=2, anchor="ne")
+            progress = tk.Canvas(item_row, height=44, background="#f4f8fb", highlightthickness=0, borderwidth=0)
+            progress.grid(row=0, column=1, sticky="ew")
+
+            def draw_progress(event: tk.Event, *, canvas=progress, pity=pull.pity) -> None:
+                canvas.delete("all")
+                available = max(110, min(500, event.width - 4))
+                width = self._pity_bar_width(pity, available)
+                canvas.create_rectangle(0, 3, width, 41, fill=self._pity_color(pity), outline="")
+                canvas.create_text(
+                    12,
+                    22,
+                    text=f"{pity} 抽",
+                    anchor="w",
+                    fill="#17212b",
+                    font=("Microsoft YaHei UI", 12, "bold"),
+                )
+
+            progress.bind("<Configure>", draw_progress)
+
+    @staticmethod
+    def _same_item_name(actual: str, expected: str) -> bool:
+        translation = str.maketrans({"（": "(", "）": ")"})
+        normalize = lambda value: "".join(str(value).translate(translation).split()).casefold()
+        return normalize(actual) == normalize(expected)
+
+    @staticmethod
+    def _pity_color(pity: int) -> str:
+        if pity <= 30:
+            return "#50c69f"
+        if pity <= 60:
+            return "#e7c65e"
+        return "#df654f"
+
+    @staticmethod
+    def _pity_bar_width(pity: int, available: int) -> int:
+        return max(80, int(available * min(max(pity, 1), 160) / 160))
 
     def _add_gacha_row(self, index: int, group: dict) -> None:
         ids = group.get("Ids", [])
@@ -1008,6 +1393,105 @@ class StellaSoraApp:
         item_text.configure(state="disabled")
         item_text.grid(row=0, column=4, sticky="nsew")
         self.gacha_rows[str(index)] = group
+
+    def _add_gacha_list_row(self, index: int, group: dict) -> None:
+        ids = group.get("Ids", [])
+        category = classify_history_category([group])
+        row = tk.Frame(
+            self.gacha_rows_content,
+            background=PANEL,
+            highlightbackground=LINE,
+            highlightthickness=1,
+        )
+        row.grid(row=index, column=0, sticky="ew", pady=(0, 6))
+        self.gacha_rows_content.grid_columnconfigure(0, weight=1)
+        row.grid_columnconfigure(0, weight=1)
+        top = tk.Frame(row, background=PANEL)
+        top.grid(row=0, column=0, sticky="ew", padx=12, pady=(9, 2))
+        tk.Label(
+            top,
+            text=GACHA_CATEGORY_NAMES.get(category, "未知卡池"),
+            background=PANEL,
+            foreground=ACCENT_DARK,
+            font=("Microsoft YaHei UI", 9, "bold"),
+        ).pack(side="left")
+        tk.Label(
+            top,
+            text=f"{self._format_time(group.get('Time'))} · ID {group.get('Gid', '-')} · {len(ids)} 抽",
+            background=PANEL,
+            foreground=MUTED,
+            font=("Microsoft YaHei UI", 8),
+        ).pack(side="right")
+        self._add_gacha_items_text(row, ids, row=1, padx=12, pady=(2, 9))
+        self.gacha_rows[str(index)] = group
+
+    def _add_gacha_grid_card(self, index: int, group: dict, columns: int) -> None:
+        ids = group.get("Ids", [])
+        category = classify_history_category([group])
+        card = tk.Frame(
+            self.gacha_rows_content,
+            background="#f4f8fb",
+            highlightbackground=LINE,
+            highlightthickness=1,
+        )
+        card.grid(
+            row=index // columns,
+            column=index % columns,
+            sticky="nsew",
+            padx=(0, 6) if index % columns < columns - 1 else 0,
+            pady=(0, 6),
+        )
+        card.grid_columnconfigure(0, weight=1)
+        tk.Label(
+            card,
+            text=GACHA_CATEGORY_NAMES.get(category, "未知卡池"),
+            background="#f4f8fb",
+            foreground=ACCENT_DARK,
+            font=("Microsoft YaHei UI", 9, "bold"),
+            anchor="w",
+        ).grid(row=0, column=0, sticky="ew", padx=12, pady=(10, 2))
+        tk.Label(
+            card,
+            text=f"{self._format_time(group.get('Time'))} · {len(ids)} 抽",
+            background="#f4f8fb",
+            foreground=MUTED,
+            font=("Microsoft YaHei UI", 8),
+            anchor="w",
+        ).grid(row=1, column=0, sticky="ew", padx=12)
+        self._add_gacha_items_text(card, ids, row=2, padx=12, pady=(7, 10), background="#f4f8fb")
+        self.gacha_rows[str(index)] = group
+
+    def _add_gacha_items_text(
+        self,
+        parent: tk.Widget,
+        ids: list[Any],
+        *,
+        row: int,
+        padx: int,
+        pady: tuple[int, int],
+        background: str = PANEL,
+    ) -> None:
+        item_text = tk.Text(
+            parent,
+            height=max(1, min(3, (len(ids) + 3) // 4)),
+            wrap="word",
+            relief="flat",
+            borderwidth=0,
+            background=background,
+            foreground=INK,
+            font=("Microsoft YaHei UI", 9),
+            padx=0,
+            pady=0,
+            cursor="arrow",
+        )
+        item_text.tag_configure("five_star", foreground="#d87822")
+        for position, item_id in enumerate(ids):
+            tag = "five_star" if self._is_five_star_item(item_id) else ()
+            item_text.insert("end", gacha_item_name(item_id), tag)
+            if position + 1 < len(ids):
+                item_text.insert("end", "、")
+        item_text.configure(state="disabled")
+        item_text.grid(row=row, column=0, sticky="ew", padx=padx, pady=pady)
 
     @staticmethod
     def _is_five_star_item(value: Any) -> bool:
@@ -1085,6 +1569,28 @@ class StellaSoraApp:
             os.startfile(self.output_dir)  # type: ignore[attr-defined]
         else:
             subprocess.Popen(["xdg-open", str(self.output_dir)])
+
+    def _copy_archive_path(self) -> None:
+        archive_path = str(self.output_dir / ARCHIVE_FILENAME)
+        self.root.clipboard_clear()
+        self.root.clipboard_append(archive_path)
+        self.status_var.set("归档路径已复制")
+
+    def _backup_archive(self) -> None:
+        archive_path = self.output_dir / ARCHIVE_FILENAME
+        if not archive_path.exists():
+            messagebox.showinfo("创建备份", "尚未找到本地招募归档，请先刷新游戏数据。", parent=self.root)
+            return
+        backup_dir = self.output_dir / "backups"
+        backup_dir.mkdir(parents=True, exist_ok=True)
+        target = backup_dir / f"stellasora_gacha_archive_{datetime.now():%Y%m%d_%H%M%S}.json"
+        try:
+            shutil.copy2(archive_path, target)
+        except OSError as error:
+            messagebox.showerror("备份失败", str(error), parent=self.root)
+            return
+        self.status_var.set(f"备份已创建：{target.name}")
+        messagebox.showinfo("备份完成", f"已保存到：\n{target}", parent=self.root)
 
 
 def build_parser() -> argparse.ArgumentParser:

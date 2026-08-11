@@ -7,6 +7,7 @@ from stellasora_toolkit.gacha_stats import (
     CATEGORY_TRAVELER_STANDARD,
     build_pool_stats,
     build_category_stat,
+    build_banner_stats_with_shared_pity,
     classify_history_category,
 )
 from stellasora_toolkit.service import merge_gacha_categories
@@ -23,21 +24,35 @@ class GachaStatsTests(unittest.TestCase):
         self.assertEqual(pools[10].total_pulls, 6)
         self.assertEqual([pull.pity for pull in pools[10].five_stars], [3, 3])
         self.assertEqual(pools[10].average_pulls, 3)
+        self.assertEqual(pools[10].current_pity, 0)
         self.assertEqual(pools[20].five_stars[0].pity, 1)
 
     def test_pool_without_five_star_has_no_average(self):
         pool = build_pool_stats([{"Gid": 10, "Time": 100, "Ids": [1, 2]}])[0]
         self.assertIsNone(pool.average_pulls)
+        self.assertEqual(pool.current_pity, 2)
 
     def test_category_stat_merges_banner_ids(self):
         stat = build_category_stat([
             {"Gid": 10110, "Time": 100, "Ids": [1, 110]},
-            {"Gid": 10120, "Time": 101, "Ids": [2, 120, 160]},
+            {"Gid": 10120, "Time": 101, "Ids": [2, 120, 160, 3]},
         ])
         self.assertIsNotNone(stat)
-        self.assertEqual(stat.total_pulls, 5)
+        self.assertEqual(stat.total_pulls, 6)
         self.assertEqual([hit.pity for hit in stat.five_stars], [3, 2])
         self.assertEqual([hit.item_id for hit in stat.five_stars], [160, 110])
+        self.assertEqual([hit.gid for hit in stat.five_stars], [10120, 10110])
+        self.assertEqual(stat.current_pity, 1)
+
+    def test_banner_stats_keep_limited_pity_between_banner_ids(self):
+        pools = {pool.gid: pool for pool in build_banner_stats_with_shared_pity([
+            {"Gid": 10110, "Time": 100, "Ids": [1, 2, 110, 3, 4]},
+            {"Gid": 10120, "Time": 101, "Ids": [160]},
+        ])}
+        self.assertEqual(pools[10110].total_pulls, 5)
+        self.assertEqual(pools[10120].total_pulls, 1)
+        self.assertEqual(pools[10110].five_stars[0].pity, 3)
+        self.assertEqual(pools[10120].five_stars[0].pity, 3)
 
     def test_classifies_the_four_official_history_types_from_pool_ids(self):
         self.assertEqual(classify_history_category([{"Gid": 10160}]), CATEGORY_TRAVELER_LIMITED)

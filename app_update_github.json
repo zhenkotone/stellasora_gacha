@@ -1,8 +1,8 @@
 {
-  "version": "1.2.7",
-  "url": "https://github.com/zhenkotone/stellasora_gacha/releases/download/v1.2.7/StellaSoraGachaTool-Portable-1.2.7.zip",
-  "sha256": "56daa7bb6f37c73d2439f0b95c5cd34c7d5c960b4aed90332b98b0937e9d1533",
-  "installer_url": "https://github.com/zhenkotone/stellasora_gacha/releases/download/v1.2.7/StellaSoraGachaTool-Setup-1.2.7.exe",
-  "installer_sha256": "a8fcf33f559c4878097a5320f8bb0d0908c6939d1068f732b1aa4cd7e3f50e3a",
-  "notes": "软件界面新增使用说明、数据备份提示及风险与免责声明。"
+  "version": "1.2.8",
+  "url": "https://github.com/zhenkotone/stellasora_gacha/releases/download/v1.2.8/StellaSoraGachaTool-Portable-1.2.8.zip",
+  "sha256": "a4393a38905bdad8fddb112e3ffc018332b7342546b664a17ad6ec0bbbbd6d38",
+  "installer_url": "https://github.com/zhenkotone/stellasora_gacha/releases/download/v1.2.8/StellaSoraGachaTool-Setup-1.2.8.exe",
+  "installer_sha256": "e9993d56b32253a2bd7452d9a9ccf50750834475b4de85d2e2c29ae9254a5f34",
+  "notes": "招募记录升级为五星卡池卡片：内置官方卡池名称与 UP/歪判断，方形头像和按 160 抽保底比例显示的进度条；首页同步优化五星宫格。"
 }

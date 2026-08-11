@@ -39,6 +39,7 @@ class FiveStarPull:
     pity: int
     timestamp: int
     position: int
+    gid: int = 0
 
 
 @dataclass(frozen=True)
@@ -54,6 +55,13 @@ class PoolStats:
         if not self.five_stars:
             return None
         return round(self.total_pulls / len(self.five_stars))
+
+    @property
+    def current_pity(self) -> int:
+        """Pulls since the most recent five-star in this pool."""
+        if not self.five_stars:
+            return self.total_pulls
+        return self.total_pulls - max(pull.position for pull in self.five_stars)
 
 
 def build_pool_stats(groups: list[dict[str, Any]]) -> list[PoolStats]:
@@ -93,6 +101,7 @@ def build_pool_stats(groups: list[dict[str, Any]]) -> list[PoolStats]:
                         pity=since_last_five,
                         timestamp=timestamp,
                         position=total,
+                        gid=gid,
                     )
                 )
                 since_last_five = 0
@@ -109,6 +118,60 @@ def build_pool_stats(groups: list[dict[str, Any]]) -> list[PoolStats]:
     return pools
 
 
+def build_banner_stats_with_shared_pity(groups: list[dict[str, Any]]) -> list[PoolStats]:
+    """Split banners by GID while carrying five-star pity across the category."""
+    ordered = sorted(groups, key=lambda item: (int(item.get("Time") or 0), int(item.get("Gid") or 0)))
+    banner_totals: dict[int, int] = {}
+    banner_times: dict[int, list[int]] = {}
+    banner_hits: dict[int, list[FiveStarPull]] = {}
+    shared_position = 0
+    since_last_five = 0
+
+    for group in ordered:
+        try:
+            gid = int(group.get("Gid"))
+        except (TypeError, ValueError):
+            continue
+        timestamp = int(group.get("Time") or 0)
+        if timestamp:
+            banner_times.setdefault(gid, []).append(timestamp)
+        for raw_id in group.get("Ids", []):
+            shared_position += 1
+            since_last_five += 1
+            banner_totals[gid] = banner_totals.get(gid, 0) + 1
+            try:
+                item_id = int(raw_id)
+            except (TypeError, ValueError):
+                continue
+            if item_id not in FIVE_STAR_ITEMS:
+                continue
+            banner_hits.setdefault(gid, []).append(
+                FiveStarPull(
+                    item_id=item_id,
+                    kind=gacha_item_kind(item_id),
+                    name=gacha_item_name(item_id),
+                    pity=since_last_five,
+                    timestamp=timestamp,
+                    position=shared_position,
+                    gid=gid,
+                )
+            )
+            since_last_five = 0
+
+    pools = [
+        PoolStats(
+            gid=gid,
+            total_pulls=total,
+            start_time=min(banner_times.get(gid, []), default=0),
+            end_time=max(banner_times.get(gid, []), default=0),
+            five_stars=tuple(reversed(banner_hits.get(gid, []))),
+        )
+        for gid, total in banner_totals.items()
+    ]
+    pools.sort(key=lambda item: (item.end_time, item.gid), reverse=True)
+    return pools
+
+
 def build_category_stat(groups: list[dict[str, Any]]) -> PoolStats | None:
     """Merge all banner IDs belonging to one official history category."""
     if not groups:
@@ -120,6 +183,10 @@ def build_category_stat(groups: list[dict[str, Any]]) -> PoolStats | None:
     times: list[int] = []
     for group in ordered:
         timestamp = int(group.get("Time") or 0)
+        try:
+            gid = int(group.get("Gid") or 0)
+        except (TypeError, ValueError):
+            gid = 0
         if timestamp:
             times.append(timestamp)
         for raw_id in group.get("Ids", []):
@@ -139,6 +206,7 @@ def build_category_stat(groups: list[dict[str, Any]]) -> PoolStats | None:
                     pity=since_last_five,
                     timestamp=timestamp,
                     position=total,
+                    gid=gid,
                 )
             )
             since_last_five = 0
