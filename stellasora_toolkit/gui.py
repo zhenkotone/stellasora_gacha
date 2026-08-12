@@ -59,7 +59,7 @@ HEADER = "#607d98"
 POOL_COLORS = ("#7776aa", "#4d9ba0", "#5d82a9", "#8e6d9c")
 FIVE_STAR_AVATAR_SIZE = 70
 FIVE_STAR_TILE_IMAGE_SIZE = 78
-APP_VERSION = "1.2.9"
+APP_VERSION = "1.2.10"
 GACHA_CATEGORY_ORDER = (
     CATEGORY_TRAVELER_LIMITED,
     CATEGORY_DISC_LIMITED,
@@ -94,17 +94,6 @@ OFFICIAL_LIMITED_POOL_INFO = {
     11133: ("摇曳轻风纯情香", "2026-08-04", "2026-08-25", "夏花"),
     21133: ("午后微光、共入翠梦", "2026-08-04", "2026-08-25", "鹿鸣"),
 }
-
-
-def is_running_as_administrator() -> bool:
-    if os.name != "nt":
-        return True
-    try:
-        import ctypes
-
-        return bool(ctypes.windll.shell32.IsUserAnAdmin())
-    except (AttributeError, OSError):
-        return False
 
 
 class StellaSoraApp:
@@ -147,14 +136,6 @@ class StellaSoraApp:
         except tk.TclError:
             pass
 
-    def _show_admin_warning(self) -> None:
-        messagebox.showwarning(
-            "建议以管理员身份运行",
-            "当前软件未以管理员身份运行，可能无法读取星塔旅人游戏进程。\n\n"
-            "请退出软件后，右键点击程序并选择“以管理员身份运行”。",
-            parent=self.root,
-        )
-
     def _configure_styles(self) -> None:
         style = ttk.Style(self.root)
         style.theme_use("clam")
@@ -177,7 +158,7 @@ class StellaSoraApp:
         style.map("Treeview", background=[("selected", "#dceaf4")], foreground=[("selected", INK)])
         style.configure("Horizontal.TProgressbar", troughcolor="#d7e2eb", background=ACCENT, borderwidth=0)
         style.configure("Layout.TRadiobutton", background=PANEL, foreground=INK, font=("Microsoft YaHei UI", 9), padding=(5, 0))
-        style.configure("FiveStarLayout.TRadiobutton", background=PANEL, foreground=INK, font=("Microsoft YaHei UI", 7), padding=(4, 0))
+        style.configure("FiveStarLayout.TRadiobutton", background=PANEL, foreground=INK, font=("Microsoft YaHei UI", 9), padding=(5, 0))
 
     @staticmethod
     def _cleanup_stale_update_files() -> None:
@@ -421,7 +402,7 @@ class StellaSoraApp:
 
         heading("使用方法")
         paragraph("1. 登录游戏并进入主界面，在游戏内依次打开旅人限时、秘纹限时、旅人常驻、秘纹常驻四类招募记录，等待每个记录列表显示。")
-        paragraph("2. 回到本工具点击“刷新游戏数据”。只有该功能需要管理员权限；读取完成后，五星一览和招募记录会自动更新。")
+        paragraph("2. 回到本工具点击“刷新游戏数据”。读取完成后，五星一览和招募记录会自动更新；读取失败时可尝试以管理员身份运行。")
         paragraph("3. 新角色头像缺失时点击“更新角色资源”；软件版本可通过“检查更新”进行升级。")
 
         heading("数据与备份")
@@ -464,8 +445,6 @@ class StellaSoraApp:
             for category in GACHA_CATEGORY_ORDER
         }
         total_five = sum(len(stat.five_stars) for stat in stats_by_category.values() if stat is not None)
-        loaded_count = sum(category in semantic_categories for category in GACHA_CATEGORY_ORDER)
-
         self._build_home_summary(stats_by_category)
 
         intro = ttk.Frame(self.stats_content, style="Panel.TFrame", padding=(14, 11))
@@ -477,13 +456,6 @@ class StellaSoraApp:
             foreground=INK,
             font=("Microsoft YaHei UI", 11, "bold"),
         ).pack(side="left")
-        ttk.Label(
-            intro,
-            text=f"已加载分类 {loaded_count}/4 · 间隔抽数按同一卡池独立计算",
-            background=PANEL,
-            foreground=MUTED,
-            font=("Microsoft YaHei UI", 7),
-        ).pack(side="right", padx=(16, 0))
         layout_switch = ttk.Frame(intro, style="Panel.TFrame")
         layout_switch.pack(side="right")
         ttk.Radiobutton(
@@ -521,11 +493,16 @@ class StellaSoraApp:
                 pady=(0, 8),
             )
             pool_grid.rowconfigure(index // grid_columns, weight=1)
-            self._build_category_heading(name, category_stat is not None, panel)
             if category_stat is None:
                 self._build_missing_category(panel)
                 continue
-            self._build_pool_section(category_stat, POOL_COLORS[color_index % len(POOL_COLORS)], name, panel)
+            self._build_pool_section(
+                category_stat,
+                POOL_COLORS[color_index % len(POOL_COLORS)],
+                name,
+                panel,
+                category=category,
+            )
             color_index += 1
 
     def _build_home_summary(self, stats_by_category: dict[str, PoolStats | None]) -> None:
@@ -565,9 +542,27 @@ class StellaSoraApp:
             top = tk.Frame(row, background=PANEL)
             top.pack(fill="x")
             tk.Label(top, text=title, background=PANEL, foreground=INK, font=("Microsoft YaHei UI", 9, "bold")).pack(side="left")
-            tk.Label(top, text=f"{stat.current_pity} 抽垫抽", background=PANEL, foreground=ACCENT_DARK, font=("Microsoft YaHei UI", 9, "bold")).pack(side="right")
-            progress = ttk.Progressbar(row, mode="determinate", maximum=80, value=min(stat.current_pity, 80), length=280)
-            progress.pack(anchor="w", pady=(5, 0))
+            pity_limit = GACHA_CATEGORY_PITY_LIMITS[category]
+            tk.Label(
+                top,
+                text=f"保底 {pity_limit} 抽",
+                background=PANEL,
+                foreground=MUTED,
+                font=("Microsoft YaHei UI", 8),
+            ).pack(side="right")
+            progress = tk.Canvas(row, height=38, background=PANEL, highlightthickness=0, borderwidth=0)
+            progress.pack(fill="x", pady=(5, 0))
+
+            def draw_home_progress(
+                event: tk.Event,
+                *,
+                canvas=progress,
+                pity=stat.current_pity,
+                limit=pity_limit,
+            ) -> None:
+                self._draw_pity_bar(canvas, event.width, pity, limit, height=34, font_size=10)
+
+            progress.bind("<Configure>", draw_home_progress)
 
         tk.Label(
             recent_panel,
@@ -626,25 +621,6 @@ class StellaSoraApp:
         except OSError:
             pass
 
-    def _build_category_heading(self, name: str, loaded: bool, parent: ttk.Frame | None = None) -> None:
-        container = parent or self.stats_content
-        heading = ttk.Frame(container, style="App.TFrame", padding=(3, 6, 3, 3))
-        heading.pack(fill="x")
-        ttk.Label(
-            heading,
-            text=name,
-            background=BG,
-            foreground=ACCENT_DARK if loaded else MUTED,
-            font=("Microsoft YaHei UI", 7, "bold"),
-        ).pack(side="left")
-        ttk.Label(
-            heading,
-            text="已加载" if loaded else "未加载",
-            background=BG,
-            foreground=ACCENT if loaded else WARM,
-            font=("Microsoft YaHei UI", 7),
-        ).pack(side="right")
-
     def _build_missing_category(self, parent: ttk.Frame | None = None) -> None:
         container = parent or self.stats_content
         frame = ttk.Frame(container, style="Panel.TFrame", padding=(13, 11))
@@ -663,6 +639,8 @@ class StellaSoraApp:
         color: str,
         category_name: str,
         parent: ttk.Frame | None = None,
+        *,
+        category: str,
     ) -> None:
         container = parent or self.stats_content
         section = ttk.Frame(container, style="Panel.TFrame")
@@ -693,8 +671,14 @@ class StellaSoraApp:
         summary.pack(side="right", fill="y", padx=(0, 14), pady=10)
         self._pool_metric(summary, str(pool.total_pulls), "总抽数")
         self._pool_metric(summary, str(len(pool.five_stars)), "五星")
-        average = "-" if pool.average_pulls is None else str(pool.average_pulls)
-        self._pool_metric(summary, average, "平均抽数")
+        if category in {CATEGORY_TRAVELER_LIMITED, CATEGORY_DISC_LIMITED}:
+            up_average = self._up_average_pulls(pool)
+            average = "-" if up_average is None else str(up_average)
+            average_label = "UP 平均"
+        else:
+            average = "-" if pool.average_pulls is None else str(pool.average_pulls)
+            average_label = "平均抽数"
+        self._pool_metric(summary, average, average_label)
 
         hits = tk.Frame(section, background=PANEL)
         hits.pack(fill="x", padx=14, pady=(12, 14))
@@ -770,6 +754,16 @@ class StellaSoraApp:
             foreground="#e5ebe7",
             font=("Microsoft YaHei UI", 8),
         ).pack()
+
+    @classmethod
+    def _up_average_pulls(cls, pool: PoolStats) -> int | None:
+        up_count = sum(
+            1
+            for pull in pool.five_stars
+            if (official_pool := OFFICIAL_LIMITED_POOL_INFO.get(pull.gid)) is not None
+            and cls._same_item_name(pull.name, official_pool[3])
+        )
+        return round(pool.total_pulls / up_count) if up_count else None
 
     @staticmethod
     def _darken(color: str) -> str:
@@ -878,8 +872,6 @@ class StellaSoraApp:
     def refresh(self) -> None:
         if self.busy:
             return
-        if not is_running_as_administrator():
-            self._show_admin_warning()
         self.busy = True
         self.refresh_button.state(["disabled"])
         self.progress.grid()
@@ -1305,8 +1297,8 @@ class StellaSoraApp:
                 pity=pull.pity,
                 pity_limit=GACHA_CATEGORY_PITY_LIMITS[category],
             ) -> None:
+                available = max(160, min(720, event.width - 4))
                 canvas.delete("all")
-                available = max(110, min(500, event.width - 4))
                 width = self._pity_bar_width(pity, available, pity_limit)
                 canvas.create_rectangle(0, 3, width, 41, fill=self._pity_color(pity), outline="")
                 canvas.create_text(
@@ -1337,6 +1329,41 @@ class StellaSoraApp:
     @staticmethod
     def _pity_bar_width(pity: int, available: int, pity_limit: int = 160) -> int:
         return max(80, int(available * min(max(pity, 1), pity_limit) / pity_limit))
+
+    @classmethod
+    def _draw_pity_bar(
+        cls,
+        canvas: tk.Canvas,
+        available: int,
+        pity: int,
+        pity_limit: int,
+        *,
+        height: int,
+        font_size: int,
+    ) -> None:
+        canvas.delete("all")
+        track_width = max(160, available - 4)
+        top = 2
+        bottom = top + height
+        fill_width = cls._pity_bar_width(pity, track_width, pity_limit)
+        canvas.create_rectangle(0, top, track_width, bottom, fill="#dbe5ec", outline="")
+        canvas.create_rectangle(0, top, fill_width, bottom, fill=cls._pity_color(pity), outline="")
+        canvas.create_text(
+            12,
+            top + height // 2,
+            text=f"{pity} 抽",
+            anchor="w",
+            fill="#17212b",
+            font=("Microsoft YaHei UI", font_size, "bold"),
+        )
+        canvas.create_text(
+            track_width - 10,
+            top + height // 2,
+            text=f"/{pity_limit}",
+            anchor="e",
+            fill="#526577",
+            font=("Microsoft YaHei UI", max(8, font_size - 2)),
+        )
 
     def _add_gacha_row(self, index: int, group: dict) -> None:
         ids = group.get("Ids", [])

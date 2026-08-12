@@ -1,8 +1,8 @@
 {
-  "version": "1.2.9",
-  "url": "https://github.com/zhenkotone/stellasora_gacha/releases/download/v1.2.9/StellaSoraGachaTool-Portable-1.2.9.zip",
-  "sha256": "132c424fedac414f72df3c4974eeca659c1f87febbac382f4c9c8c0273f80f75",
-  "installer_url": "https://github.com/zhenkotone/stellasora_gacha/releases/download/v1.2.9/StellaSoraGachaTool-Setup-1.2.9.exe",
-  "installer_sha256": "bf313e8e0d6c8a3bd298be873d11463bcd7574d5faab4bd5ef53bb507b8279a7",
-  "notes": "新增独立自动更新程序，后续更新可自动解压替换并重启；秘纹池进度条改为按 120 抽保底显示，旅人池保持 160 抽。"
+  "version": "1.2.10",
+  "url": "https://github.com/zhenkotone/stellasora_gacha/releases/download/v1.2.10/StellaSoraGachaTool-Portable-1.2.10.zip",
+  "sha256": "1893a569b0c480e384c5c2daf6b9917f97ff8f37e7fcda15fde5cdbb25c9b0af",
+  "installer_url": "https://github.com/zhenkotone/stellasora_gacha/releases/download/v1.2.10/StellaSoraGachaTool-Setup-1.2.10.exe",
+  "installer_sha256": "54d991696ef070c62c79ca84b2bca1f218751f5c60b74668b4bfc923e8d35cbe",
+  "notes": "优化首页与招募记录界面：首页垫抽使用保底进度条，限时池显示 UP 平均；精简卡池状态和布局说明文字；取消刷新时的管理员检测提示。"
 }
