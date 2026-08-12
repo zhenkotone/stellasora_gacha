@@ -13,11 +13,16 @@ from datetime import datetime
 from pathlib import Path
 from tkinter import messagebox, ttk
 from typing import Any
-from urllib.parse import urlparse
 
 from PIL import Image, ImageDraw, ImageOps, ImageTk
 
-from .app_updater import UPDATE_MANIFEST_URL, AppUpdate, check_for_update, download_update, is_installed_application
+from .app_updater import (
+    UPDATE_MANIFEST_URL,
+    AppUpdate,
+    check_for_update,
+    download_update,
+    launch_update_installer,
+)
 from .catalog import (
     FIVE_STAR_ITEMS,
     format_random_attr,
@@ -54,7 +59,7 @@ HEADER = "#607d98"
 POOL_COLORS = ("#7776aa", "#4d9ba0", "#5d82a9", "#8e6d9c")
 FIVE_STAR_AVATAR_SIZE = 70
 FIVE_STAR_TILE_IMAGE_SIZE = 78
-APP_VERSION = "1.2.8"
+APP_VERSION = "1.2.9"
 GACHA_CATEGORY_ORDER = (
     CATEGORY_TRAVELER_LIMITED,
     CATEGORY_DISC_LIMITED,
@@ -66,6 +71,12 @@ GACHA_CATEGORY_NAMES = {
     CATEGORY_DISC_LIMITED: "秘纹限时招募",
     CATEGORY_TRAVELER_STANDARD: "旅人常驻招募",
     CATEGORY_DISC_STANDARD: "秘纹常驻招募",
+}
+GACHA_CATEGORY_PITY_LIMITS = {
+    CATEGORY_TRAVELER_LIMITED: 160,
+    CATEGORY_DISC_LIMITED: 120,
+    CATEGORY_TRAVELER_STANDARD: 160,
+    CATEGORY_DISC_STANDARD: 120,
 }
 OFFICIAL_LIMITED_POOL_INFO = {
     10143: ("划破黑暗的银枪", "2026-02-24", "2026-03-17", "风影"),
@@ -939,7 +950,6 @@ class StellaSoraApp:
         self.progress.grid()
         self.progress.start(12)
         self.status_var.set(f"正在下载软件更新 {update.version}")
-        use_installer = is_installed_application(Path(sys.executable).resolve()) and update.has_installer
 
         def work() -> None:
             try:
@@ -947,40 +957,15 @@ class StellaSoraApp:
                     update,
                     self.output_dir / "updates",
                     progress=lambda message: self.events.put(("progress", message)),
-                    installer=use_installer,
                 )
-                if not use_installer:
-                    version = update.version.lstrip("vV")
-                    suffix = Path(urlparse(update.url).path).suffix or ".bin"
-                    saved_path = self.output_dir / "updates" / f"星塔旅人数据工具-v{version}{suffix}"
-                    os.replace(path, saved_path)
-                    path = saved_path
-                self.events.put(("app_update_downloaded", (update, path, use_installer)))
+                self.events.put(("app_update_downloaded", (update, path)))
             except Exception as error:
                 self.events.put(("app_update_download_error", error))
 
         threading.Thread(target=work, name="stellasora-update-download", daemon=True).start()
 
     def _install_app_update(self, downloaded_path: Path) -> None:
-        target = Path(sys.executable).resolve()
-        quote = lambda value: "'" + str(value).replace("'", "''") + "'"
-        installer = subprocess.Popen(
-            [str(downloaded_path), "/VERYSILENT", "/SUPPRESSMSGBOXES", "/NORESTART", "/CLOSEAPPLICATIONS"],
-            creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
-        )
-        command = (
-            f"Wait-Process -Id {installer.pid} -ErrorAction SilentlyContinue; "
-            "if (Test-Path -LiteralPath " + quote(target) + ") { "
-            "$runtime = Join-Path $env:LOCALAPPDATA 'StellaSoraGachaTool\\runtime'; "
-            "New-Item -ItemType Directory -Path $runtime -Force | Out-Null; "
-            "$env:TEMP = $runtime; $env:TMP = $runtime; "
-            f"Start-Process -FilePath {quote(target)} -WorkingDirectory {quote(target.parent)} "
-            "}"
-        )
-        subprocess.Popen(
-            ["powershell.exe", "-NoProfile", "-WindowStyle", "Hidden", "-Command", command],
-            creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
-        )
+        launch_update_installer(downloaded_path, Path(sys.executable))
         self.root.destroy()
 
     def _poll_events(self) -> None:
@@ -1041,19 +1026,20 @@ class StellaSoraApp:
                         self.status_var.set("软件更新检查失败")
                         messagebox.showerror("检查更新失败", str(error), parent=self.root)
                 elif event == "app_update_downloaded":
-                    update, path, use_installer = payload
+                    update, path = payload
                     self._finish_busy()
                     self.update_button.state(["!disabled"])
                     self.status_var.set(f"软件更新 {update.version} 下载完成")
-                    if use_installer:
-                        messagebox.showinfo("更新就绪", "软件将关闭并由安装程序完成更新，然后自动重新启动。", parent=self.root)
-                        self._install_app_update(path)
-                    else:
-                        messagebox.showinfo(
-                            "更新已下载",
-                            f"新版压缩包已保存到：\n{path}\n\n请解压后运行其中的新版程序。",
-                            parent=self.root,
-                        )
+                    if messagebox.askokcancel(
+                        "更新就绪",
+                        "更新包已下载并校验完成。\n\n软件将关闭，自动替换文件后重新启动。",
+                        parent=self.root,
+                    ):
+                        try:
+                            self._install_app_update(path)
+                        except Exception as error:
+                            self.status_var.set("更新程序启动失败")
+                            messagebox.showerror("更新程序启动失败", str(error), parent=self.root)
                 elif event == "app_update_download_error":
                     self._finish_busy()
                     self.update_button.state(["!disabled"])
@@ -1312,10 +1298,16 @@ class StellaSoraApp:
             progress = tk.Canvas(item_row, height=44, background="#f4f8fb", highlightthickness=0, borderwidth=0)
             progress.grid(row=0, column=1, sticky="ew")
 
-            def draw_progress(event: tk.Event, *, canvas=progress, pity=pull.pity) -> None:
+            def draw_progress(
+                event: tk.Event,
+                *,
+                canvas=progress,
+                pity=pull.pity,
+                pity_limit=GACHA_CATEGORY_PITY_LIMITS[category],
+            ) -> None:
                 canvas.delete("all")
                 available = max(110, min(500, event.width - 4))
-                width = self._pity_bar_width(pity, available)
+                width = self._pity_bar_width(pity, available, pity_limit)
                 canvas.create_rectangle(0, 3, width, 41, fill=self._pity_color(pity), outline="")
                 canvas.create_text(
                     12,
@@ -1343,8 +1335,8 @@ class StellaSoraApp:
         return "#df654f"
 
     @staticmethod
-    def _pity_bar_width(pity: int, available: int) -> int:
-        return max(80, int(available * min(max(pity, 1), 160) / 160))
+    def _pity_bar_width(pity: int, available: int, pity_limit: int = 160) -> int:
+        return max(80, int(available * min(max(pity, 1), pity_limit) / pity_limit))
 
     def _add_gacha_row(self, index: int, group: dict) -> None:
         ids = group.get("Ids", [])

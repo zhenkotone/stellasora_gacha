@@ -1,4 +1,5 @@
 import hashlib
+import os
 import tempfile
 import unittest
 from pathlib import Path
@@ -75,6 +76,59 @@ class AppUpdaterTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             executable = Path(directory) / APP_INSTALL_FOLDER / APP_EXE_NAME
             self.assertTrue(is_installed_application(executable))
+
+    def test_launches_a_temporary_updater_copy(self):
+        from stellasora_toolkit.app_updater import UPDATER_EXE_NAME, launch_update_installer
+
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            executable = root / APP_EXE_NAME
+            executable.write_bytes(b"app")
+            (root / UPDATER_EXE_NAME).write_bytes(b"updater")
+            package = root / "update.zip"
+            package.write_bytes(b"package")
+            with patch("stellasora_toolkit.app_updater._directory_is_writable", return_value=True), patch(
+                "stellasora_toolkit.app_updater.subprocess.Popen"
+            ) as popen:
+                launch_update_installer(package, executable)
+
+            args = popen.call_args.args[0]
+            self.assertNotEqual(Path(args[0]).parent, root)
+            self.assertEqual(args[args.index("--target-dir") + 1], str(root))
+            self.assertEqual(args[args.index("--parent-pid") + 1], str(os.getpid()))
+            self.assertEqual(args[args.index("--cleanup-dir") + 1], str(Path(args[0]).parent))
+
+    def test_detects_bundled_update_installer(self):
+        from stellasora_toolkit.app_updater import UPDATER_EXE_NAME, update_installer_available
+
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            executable = root / APP_EXE_NAME
+            executable.write_bytes(b"app")
+            self.assertFalse(update_installer_available(executable))
+            (root / UPDATER_EXE_NAME).write_bytes(b"updater")
+            self.assertTrue(update_installer_available(executable))
+
+    def test_extracts_updater_from_package_for_legacy_versions(self):
+        import zipfile
+
+        from stellasora_toolkit.app_updater import UPDATER_EXE_NAME, launch_update_installer
+
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            executable = root / APP_EXE_NAME
+            executable.write_bytes(b"app")
+            package = root / "update.zip"
+            with zipfile.ZipFile(package, "w") as archive:
+                archive.writestr(f"StellaSoraGachaTool/{UPDATER_EXE_NAME}", b"new updater")
+
+            with patch("stellasora_toolkit.app_updater._directory_is_writable", return_value=True), patch(
+                "stellasora_toolkit.app_updater.subprocess.Popen"
+            ) as popen:
+                launch_update_installer(package, executable)
+
+            helper = Path(popen.call_args.args[0][0])
+            self.assertEqual(helper.read_bytes(), b"new updater")
 
 
 if __name__ == "__main__":

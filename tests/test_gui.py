@@ -22,3 +22,8 @@ class GuiTests(unittest.TestCase):
         self.assertEqual(StellaSoraApp._pity_bar_width(120, 500), 375)
         self.assertEqual(StellaSoraApp._pity_bar_width(80, 500), 250)
         self.assertEqual(StellaSoraApp._pity_bar_width(160, 500), 500)
+
+    def test_disc_pity_bar_uses_the_120_pull_guarantee_scale(self):
+        self.assertEqual(StellaSoraApp._pity_bar_width(60, 500, 120), 250)
+        self.assertEqual(StellaSoraApp._pity_bar_width(90, 500, 120), 375)
+        self.assertEqual(StellaSoraApp._pity_bar_width(120, 500, 120), 500)

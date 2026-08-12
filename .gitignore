@@ -7,5 +7,6 @@ build/
 dist/
 release/
 *.spec
+!StellaSoraUpdater.spec
 *.exe
 .gitee-token

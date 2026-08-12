@@ -3,7 +3,10 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import shutil
+import subprocess
 import tempfile
+import zipfile
 from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
@@ -18,6 +21,7 @@ UPDATE_MANIFEST_URLS = {
 }
 UPDATE_MANIFEST_URL = UPDATE_MANIFEST_URLS.get(UPDATE_SOURCE, UPDATE_MANIFEST_URLS["gitee"])
 APP_EXE_NAME = "StellaSoraGachaTool.exe"
+UPDATER_EXE_NAME = "StellaSoraUpdater.exe"
 APP_INSTALL_FOLDER = "StellaSoraGachaTool"
 APP_REGISTRY_KEY = r"Software\StellaSoraGachaTool"
 ProgressCallback = Callable[[str], None]
@@ -154,3 +158,77 @@ def download_update(
         if os.path.exists(temp_name):
             os.unlink(temp_name)
         raise
+
+
+def launch_update_installer(package: Path, executable: Path) -> None:
+    if os.name != "nt":
+        raise OSError("automatic software updates are only supported on Windows")
+    executable = executable.resolve(strict=True)
+    package = package.resolve(strict=True)
+    bundled_updater = executable.parent / UPDATER_EXE_NAME
+    helper_dir = Path(tempfile.mkdtemp(prefix="stellasora-updater-"))
+    helper = helper_dir / UPDATER_EXE_NAME
+    try:
+        if bundled_updater.is_file():
+            shutil.copy2(bundled_updater, helper)
+        else:
+            _extract_update_installer(package, helper)
+    except Exception:
+        shutil.rmtree(helper_dir, ignore_errors=True)
+        raise
+    args = [
+        str(helper),
+        "--package",
+        str(package),
+        "--target-dir",
+        str(executable.parent),
+        "--parent-pid",
+        str(os.getpid()),
+        "--executable",
+        executable.name,
+        "--cleanup-dir",
+        str(helper_dir),
+    ]
+
+    if _directory_is_writable(executable.parent):
+        subprocess.Popen(args, cwd=str(executable.parent))
+        return
+
+    parameters = subprocess.list2cmdline(args[1:])
+    result = __import__("ctypes").windll.shell32.ShellExecuteW(
+        None,
+        "runas",
+        str(helper),
+        parameters,
+        str(executable.parent),
+        1,
+    )
+    if result <= 32:
+        raise OSError(f"failed to start elevated updater: {result}")
+
+
+def update_installer_available(executable: Path) -> bool:
+    return (executable.resolve().parent / UPDATER_EXE_NAME).is_file()
+
+
+def _extract_update_installer(package: Path, destination: Path) -> None:
+    with zipfile.ZipFile(package, "r") as archive:
+        candidates = [
+            info
+            for info in archive.infolist()
+            if not info.is_dir() and Path(info.filename.replace("\\", "/")).name.casefold() == UPDATER_EXE_NAME.casefold()
+        ]
+        if len(candidates) != 1:
+            raise FileNotFoundError(f"update package must contain exactly one {UPDATER_EXE_NAME}")
+        with archive.open(candidates[0]) as source, destination.open("wb") as output:
+            shutil.copyfileobj(source, output)
+
+
+def _directory_is_writable(directory: Path) -> bool:
+    try:
+        fd, probe = tempfile.mkstemp(prefix=".stellasora-write-test-", dir=directory)
+        os.close(fd)
+        os.unlink(probe)
+        return True
+    except OSError:
+        return False

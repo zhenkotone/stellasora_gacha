@@ -1,8 +1,8 @@
 {
-  "version": "1.2.8",
-  "url": "https://github.com/zhenkotone/stellasora_gacha/releases/download/v1.2.8/StellaSoraGachaTool-Portable-1.2.8.zip",
-  "sha256": "a4393a38905bdad8fddb112e3ffc018332b7342546b664a17ad6ec0bbbbd6d38",
-  "installer_url": "https://github.com/zhenkotone/stellasora_gacha/releases/download/v1.2.8/StellaSoraGachaTool-Setup-1.2.8.exe",
-  "installer_sha256": "e9993d56b32253a2bd7452d9a9ccf50750834475b4de85d2e2c29ae9254a5f34",
-  "notes": "招募记录升级为五星卡池卡片：内置官方卡池名称与 UP/歪判断，方形头像和按 160 抽保底比例显示的进度条；首页同步优化五星宫格。"
+  "version": "1.2.9",
+  "url": "https://github.com/zhenkotone/stellasora_gacha/releases/download/v1.2.9/StellaSoraGachaTool-Portable-1.2.9.zip",
+  "sha256": "132c424fedac414f72df3c4974eeca659c1f87febbac382f4c9c8c0273f80f75",
+  "installer_url": "https://github.com/zhenkotone/stellasora_gacha/releases/download/v1.2.9/StellaSoraGachaTool-Setup-1.2.9.exe",
+  "installer_sha256": "bf313e8e0d6c8a3bd298be873d11463bcd7574d5faab4bd5ef53bb507b8279a7",
+  "notes": "新增独立自动更新程序，后续更新可自动解压替换并重启；秘纹池进度条改为按 120 抽保底显示，旅人池保持 160 抽。"
 }
