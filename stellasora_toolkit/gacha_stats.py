@@ -50,6 +50,7 @@ class PoolStats:
     start_time: int
     end_time: int
     five_stars: tuple[FiveStarPull, ...]
+    pity_reset_position: int = 0
 
     @property
     def average_pulls(self) -> int | None:
@@ -59,7 +60,9 @@ class PoolStats:
 
     @property
     def current_pity(self) -> int:
-        """Pulls since the most recent five-star in this pool."""
+        """Pulls since the most recent pity-resetting (UP) five-star."""
+        if self.pity_reset_position:
+            return self.total_pulls - self.pity_reset_position
         if not self.five_stars:
             return self.total_pulls
         return self.total_pulls - max(pull.position for pull in self.five_stars)
@@ -81,6 +84,7 @@ def build_pool_stats(groups: list[dict[str, Any]]) -> list[PoolStats]:
         since_last_five = 0
         hits: list[FiveStarPull] = []
         times: list[int] = []
+        reset_position = 0
         for group in pool_groups:
             timestamp = int(group.get("Time") or 0)
             if timestamp:
@@ -106,6 +110,7 @@ def build_pool_stats(groups: list[dict[str, Any]]) -> list[PoolStats]:
                     )
                 )
                 since_last_five = 0
+                reset_position = total
         pools.append(
             PoolStats(
                 gid=gid,
@@ -113,6 +118,7 @@ def build_pool_stats(groups: list[dict[str, Any]]) -> list[PoolStats]:
                 start_time=min(times, default=0),
                 end_time=max(times, default=0),
                 five_stars=tuple(hits),
+                pity_reset_position=reset_position,
             )
         )
     pools.sort(key=lambda item: (item.end_time, item.gid), reverse=True)
@@ -131,6 +137,7 @@ def build_banner_stats_with_shared_pity(
     banner_hits: dict[int, list[FiveStarPull]] = {}
     shared_position = 0
     since_last_five = 0
+    reset_position = 0
 
     for group in ordered:
         try:
@@ -163,6 +170,7 @@ def build_banner_stats_with_shared_pity(
             )
             if is_up is None or is_up(gid, item_id):
                 since_last_five = 0
+                reset_position = shared_position
 
     pools = [
         PoolStats(
@@ -171,6 +179,7 @@ def build_banner_stats_with_shared_pity(
             start_time=min(banner_times.get(gid, []), default=0),
             end_time=max(banner_times.get(gid, []), default=0),
             five_stars=tuple(reversed(banner_hits.get(gid, []))),
+            pity_reset_position=reset_position,
         )
         for gid, total in banner_totals.items()
     ]
@@ -191,6 +200,7 @@ def build_category_stat(
     since_last_five = 0
     hits: list[FiveStarPull] = []
     times: list[int] = []
+    reset_position = 0
     for group in ordered:
         timestamp = int(group.get("Time") or 0)
         try:
@@ -221,5 +231,13 @@ def build_category_stat(
             )
             if is_up is None or is_up(gid, item_id):
                 since_last_five = 0
+                reset_position = total
     # Pity is calculated chronologically; the UI presents newest results first.
-    return PoolStats(0, total, min(times, default=0), max(times, default=0), tuple(reversed(hits)))
+    return PoolStats(
+        0,
+        total,
+        min(times, default=0),
+        max(times, default=0),
+        tuple(reversed(hits)),
+        reset_position,
+    )

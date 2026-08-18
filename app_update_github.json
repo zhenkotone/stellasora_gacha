@@ -1,6 +1,6 @@
 {
-  "version": "1.2.15",
-  "url": "https://github.com/zhenkotone/stellasora_gacha/releases/download/v1.2.15/StellaSoraGachaTool-Portable-1.2.15.zip",
-  "sha256": "b63d747185faa877a1afe6d97cb8487b62468e8e7afe7a81a34a39bdc9b3bc85",
-  "notes": "修复限时池歪的五星不会重置垫抽，只有 UP 五星会重置。"
+  "version": "1.2.16",
+  "url": "https://github.com/zhenkotone/stellasora_gacha/releases/download/v1.2.16/StellaSoraGachaTool-Portable-1.2.16.zip",
+  "sha256": "8f6d88723a82d4658a1cfe259b6ad16a322f29cfcf8fc9fb6924e9e66fa3b916",
+  "notes": "修复歪的五星后首页垫抽错误归零的问题。"
 }
