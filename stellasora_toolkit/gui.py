@@ -24,10 +24,10 @@ from .app_updater import (
     launch_update_installer,
 )
 from .catalog import (
-    FIVE_STAR_ITEMS,
     format_random_attr,
     gacha_item_name,
     gem_type_name,
+    is_five_star_item,
     register_gacha_resource,
     table_values,
     traveler_name,
@@ -59,7 +59,7 @@ HEADER = "#607d98"
 POOL_COLORS = ("#7776aa", "#4d9ba0", "#5d82a9", "#8e6d9c")
 FIVE_STAR_AVATAR_SIZE = 70
 FIVE_STAR_TILE_IMAGE_SIZE = 78
-APP_VERSION = "1.2.10"
+APP_VERSION = "1.2.11"
 GACHA_CATEGORY_ORDER = (
     CATEGORY_TRAVELER_LIMITED,
     CATEGORY_DISC_LIMITED,
@@ -1515,7 +1515,7 @@ class StellaSoraApp:
     @staticmethod
     def _is_five_star_item(value: Any) -> bool:
         try:
-            return int(value) in FIVE_STAR_ITEMS
+            return is_five_star_item(value)
         except (TypeError, ValueError):
             return False
 

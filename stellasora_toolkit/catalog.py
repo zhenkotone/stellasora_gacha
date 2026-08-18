@@ -86,6 +86,21 @@ FIVE_STAR_DISCS = {
     214056: "斑驳夏影",
 }
 FIVE_STAR_ITEMS = set(FIVE_STAR_TRAVELERS) | set(FIVE_STAR_DISCS)
+
+
+def is_five_star_item(value: Any) -> bool:
+    """Return whether an item is a five-star gacha result.
+
+    The game adds new IDs before the bundled resource manifest is updated. Disc
+    five-stars use the 214xxx range, while new traveler IDs continue after the
+    current catalog. Keep the static sets authoritative, but recognize those
+    forward-compatible IDs so a new pull is not silently discarded.
+    """
+    try:
+        item_id = int(value)
+    except (TypeError, ValueError):
+        return False
+    return item_id in FIVE_STAR_ITEMS or item_id >= 161 and item_id < 200 or 214000 <= item_id < 215000
 DISC_NAMES = {
     211001: "朝霭", 211002: "和煦", 211003: "晚霞", 211004: "粉梦", 211005: "孤烟",
     211006: "甘露", 211007: "希冀", 211008: "归途",
@@ -130,7 +145,15 @@ def gacha_item_name(value: Any) -> str:
         item_id = int(value)
     except (TypeError, ValueError):
         return str(value)
-    return TRAVELER_NAMES.get(item_id, DISC_NAMES.get(item_id, f"物品 #{item_id}"))
+    if item_id in TRAVELER_NAMES:
+        return TRAVELER_NAMES[item_id]
+    if item_id in DISC_NAMES:
+        return DISC_NAMES[item_id]
+    if 161 <= item_id < 200:
+        return f"旅人 #{item_id}"
+    if 214000 <= item_id < 215000:
+        return f"秘纹 #{item_id}"
+    return f"物品 #{item_id}"
 
 
 def gacha_item_kind(value: Any) -> str:
@@ -142,6 +165,10 @@ def gacha_item_kind(value: Any) -> str:
         return "traveler"
     if item_id in FIVE_STAR_DISCS:
         return "disc"
+    if 214000 <= item_id < 215000:
+        return "disc"
+    if 161 <= item_id < 200:
+        return "traveler"
     return "unknown"
 
 

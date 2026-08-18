@@ -6,6 +6,7 @@ from stellasora_toolkit.catalog import (
     FIVE_STAR_ITEMS,
     format_attr_value,
     gacha_item_name,
+    is_five_star_item,
     register_gacha_resource,
     traveler_name,
 )
@@ -37,6 +38,13 @@ class CatalogTests(unittest.TestCase):
 
     def test_small_float_is_formatted_as_percent(self):
         self.assertEqual(format_attr_value(0.063), "6.3%")
+
+    def test_forward_compatible_new_five_star_ids(self):
+        self.assertTrue(is_five_star_item(161))
+        self.assertTrue(is_five_star_item(214999))
+        self.assertFalse(is_five_star_item(150))
+        self.assertEqual(gacha_item_name(161), "旅人 #161")
+        self.assertEqual(gacha_item_name(214999), "秘纹 #214999")
 
 
 if __name__ == "__main__":

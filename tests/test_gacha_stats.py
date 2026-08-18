@@ -32,6 +32,11 @@ class GachaStatsTests(unittest.TestCase):
         self.assertIsNone(pool.average_pulls)
         self.assertEqual(pool.current_pity, 2)
 
+    def test_unknown_future_five_star_is_kept(self):
+        pool = build_pool_stats([{"Gid": 10170, "Time": 100, "Ids": [1, 161]}])[0]
+        self.assertEqual([pull.item_id for pull in pool.five_stars], [161])
+        self.assertEqual(pool.five_stars[0].kind, "traveler")
+
     def test_category_stat_merges_banner_ids(self):
         stat = build_category_stat([
             {"Gid": 10110, "Time": 100, "Ids": [1, 110]},

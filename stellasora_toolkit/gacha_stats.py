@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
-from .catalog import FIVE_STAR_ITEMS, gacha_item_kind, gacha_item_name
+from .catalog import gacha_item_kind, gacha_item_name, is_five_star_item
 
 
 CATEGORY_TRAVELER_LIMITED = "traveler_limited"
@@ -91,7 +91,7 @@ def build_pool_stats(groups: list[dict[str, Any]]) -> list[PoolStats]:
                     item_id = int(raw_id)
                 except (TypeError, ValueError):
                     continue
-                if item_id not in FIVE_STAR_ITEMS:
+                if not is_five_star_item(item_id):
                     continue
                 hits.append(
                     FiveStarPull(
@@ -143,7 +143,7 @@ def build_banner_stats_with_shared_pity(groups: list[dict[str, Any]]) -> list[Po
                 item_id = int(raw_id)
             except (TypeError, ValueError):
                 continue
-            if item_id not in FIVE_STAR_ITEMS:
+            if not is_five_star_item(item_id):
                 continue
             banner_hits.setdefault(gid, []).append(
                 FiveStarPull(
@@ -196,7 +196,7 @@ def build_category_stat(groups: list[dict[str, Any]]) -> PoolStats | None:
                 item_id = int(raw_id)
             except (TypeError, ValueError):
                 continue
-            if item_id not in FIVE_STAR_ITEMS:
+            if not is_five_star_item(item_id):
                 continue
             hits.append(
                 FiveStarPull(

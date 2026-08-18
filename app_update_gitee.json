@@ -1,8 +1,6 @@
 {
-  "version": "1.2.10",
-  "url": "https://gitee.com/zhen-z/stellasora_gacha/releases/download/v1.2.10/StellaSoraGachaTool-Portable-1.2.10.zip",
-  "sha256": "b10743c5b771c1403f84b4ae701b38d3efee9b76cb59a828a605365b53471a10",
-  "installer_url": "https://gitee.com/zhen-z/stellasora_gacha/releases/download/v1.2.10/StellaSoraGachaTool-Setup-1.2.10.exe",
-  "installer_sha256": "86f66e1350c376a575d695b0f3ce63b2a23b8f7816caae3f72eaced2f45bbd89",
-  "notes": "优化首页与招募记录界面：首页垫抽使用保底进度条，限时池显示 UP 平均；精简卡池状态和布局说明文字；取消刷新时的管理员检测提示。"
+  "version": "1.2.11",
+  "url": "https://gitee.com/zhen-z/stellasora_gacha/releases/download/v1.2.11/StellaSoraGachaTool-Portable-1.2.11.zip",
+  "sha256": "876094c6c37612123b65ee6df76948cd2cdba93c783b9add062654ab3566598b",
+  "notes": "修复新卡池和新限时角色未显示：兼容未来五星 ID，未知角色显示编号占位。"
 }
