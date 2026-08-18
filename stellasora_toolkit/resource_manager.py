@@ -18,6 +18,8 @@ RESOURCE_MANIFEST_URLS = {
     "github": "https://raw.githubusercontent.com/zhenkotone/stellasora_gacha/main/resource_manifest_github.json",
     "gitee": "https://gitee.com/zhen-z/stellasora_gacha/raw/master/resource_manifest_gitee.json",
 }
+STELLABASE_API = "https://stella.ennead.cc/api/stella"
+STELLABASE_ASSET_API = "https://stella.ennead.cc/api/asset"
 DEFAULT_MANIFEST_URL = RESOURCE_MANIFEST_URLS.get(UPDATE_SOURCE, RESOURCE_MANIFEST_URLS["gitee"])
 ProgressCallback = Callable[[str], None]
 
@@ -36,6 +38,43 @@ def _read_url(url: str, progress: ProgressCallback | None = None) -> bytes:
                     progress("资源连接超时，正在重试")
                 time.sleep(1)
     raise OSError(f"resource download failed: {url}") from last_error
+
+
+def _scrape_stellabase_items(progress: ProgressCallback | None = None) -> list[dict]:
+    """Read current five-star portraits from StellaBase's public JSON API."""
+    discovered: list[dict] = []
+    for endpoint, kind, folder, rarity_key in (
+        ("characters?lang=CN", "traveler", "travelers", "grade"),
+        ("discs?lang=CN", "disc", "discs", "star"),
+    ):
+        try:
+            payload = json.loads(_read_url(f"{STELLABASE_API}/{endpoint}", progress).decode("utf-8"))
+        except (OSError, ValueError):
+            continue
+        if not isinstance(payload, list):
+            continue
+        for entry in payload:
+            if not isinstance(entry, dict):
+                continue
+            try:
+                item_id = int(entry["id"])
+                rarity = int(entry.get(rarity_key, 0))
+            except (KeyError, TypeError, ValueError):
+                continue
+            image_path = str(entry.get("icon") or "")
+            if rarity < 5 or not image_path.startswith("/stella/assets/"):
+                continue
+            discovered.append(
+                {
+                    "id": item_id,
+                    "kind": kind,
+                    "name": str(entry.get("name") or f"{kind} #{item_id}"),
+                    "rarity": rarity,
+                    "path": f"{folder}/{item_id}.png",
+                    "source_url": f"{STELLABASE_ASSET_API}{image_path}",
+                }
+            )
+    return discovered
 
 
 def _safe_asset_path(root: Path, relative_path: str) -> Path:
@@ -64,6 +103,20 @@ def update_resources(
 
     asset_root.mkdir(parents=True, exist_ok=True)
     items = [item for item in manifest["items"] if isinstance(item, dict)]
+    scraped_items = _scrape_stellabase_items(progress)
+    by_id: dict[tuple[str, int], dict] = {}
+    for item in items:
+        try:
+            by_id[(str(item.get("kind")), int(item["id"]))] = item
+        except (KeyError, TypeError, ValueError):
+            continue
+    for item in scraped_items:
+        key = (str(item["kind"]), int(item["id"]))
+        if key not in by_id:
+            items.append(item)
+            by_id[key] = item
+        else:
+            by_id[key].update({"name": item["name"]})
     pending: list[tuple[dict, str, Path, str]] = []
     for item in items:
         relative_path = str(item.get("path", ""))
@@ -93,7 +146,10 @@ def update_resources(
         progress("正在校验并写入角色资源")
     try:
         for _item, relative_path, target, expected_hash in pending:
-            payload = archive_data.read(relative_path) if archive_data else _read_url(urljoin(base_url, relative_path), progress)
+            source_url = str(_item.get("source_url") or "")
+            payload = archive_data.read(relative_path) if archive_data and not source_url else _read_url(
+                source_url or urljoin(base_url, relative_path), progress
+            )
             if expected_hash and hashlib.sha256(payload).hexdigest().lower() != expected_hash:
                 raise ValueError(f"resource checksum mismatch: {relative_path}")
             target.parent.mkdir(parents=True, exist_ok=True)

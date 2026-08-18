@@ -41,6 +41,10 @@ class GachaStatsTests(unittest.TestCase):
         pool = build_pool_stats([{"Gid": 10157, "Time": 1787051539, "Ids": [211007, 157]}])[0]
         self.assertEqual(pool.five_stars[0].name, "花铃")
 
+    def test_new_disc_banner_is_kept(self):
+        pool = build_pool_stats([{"Gid": 20157, "Time": 1787051539, "Ids": [214057]}])[0]
+        self.assertEqual(pool.five_stars[0].name, "伴我航行")
+
     def test_category_stat_merges_banner_ids(self):
         stat = build_category_stat([
             {"Gid": 10110, "Time": 100, "Ids": [1, 110]},

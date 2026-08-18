@@ -28,11 +28,9 @@ from .catalog import (
     gacha_item_name,
     gem_type_name,
     is_five_star_item,
-    register_gacha_resource,
     table_values,
     traveler_name,
 )
-from .resource_manager import DEFAULT_MANIFEST_URL, update_resources
 from .service import ARCHIVE_FILENAME, Snapshot, extract_snapshot, load_latest_snapshot
 from .gacha_stats import (
     CATEGORY_DISC_LIMITED,
@@ -59,7 +57,7 @@ HEADER = "#607d98"
 POOL_COLORS = ("#7776aa", "#4d9ba0", "#5d82a9", "#8e6d9c")
 FIVE_STAR_AVATAR_SIZE = 70
 FIVE_STAR_TILE_IMAGE_SIZE = 78
-APP_VERSION = "1.2.12"
+APP_VERSION = "1.2.13"
 GACHA_CATEGORY_ORDER = (
     CATEGORY_TRAVELER_LIMITED,
     CATEGORY_DISC_LIMITED,
@@ -91,6 +89,7 @@ OFFICIAL_LIMITED_POOL_INFO = {
     20140: ("奇思妙想，寄于手作", "2026-06-02", "2026-06-23", "微小的乐园"),
     10160: ("下水之前别忘热身！", "2026-07-21", "2026-08-11", "薇洛(盛夏)"),
     20160: ("波光荡漾，轻触的指尖", "2026-07-21", "2026-08-11", "浮光掠影"),
+    20157: ("碧浪晕七彩", "2026-08-18", "2026-09-08", "伴我航行"),
     11133: ("摇曳轻风纯情香", "2026-08-04", "2026-08-25", "夏花"),
     21133: ("午后微光、共入翠梦", "2026-08-04", "2026-08-25", "鹿鸣"),
     10157: ("追晴逐日的花漫波", "2026-08-18", "2026-09-08", "花铃"),
@@ -206,8 +205,6 @@ class StellaSoraApp:
         actions.grid(row=0, column=2, sticky="e")
         self.open_button = ttk.Button(actions, text="打开导出目录", command=self._open_exports)
         self.open_button.pack(side="left", padx=(0, 8))
-        self.resource_button = ttk.Button(actions, text="更新角色资源", command=self.update_resources)
-        self.resource_button.pack(side="left", padx=(0, 8))
         self.update_button = ttk.Button(actions, text="检查更新", command=self.check_app_update)
         self.update_button.pack(side="left", padx=(0, 8))
         self.refresh_button = ttk.Button(actions, text="刷新游戏数据", style="Accent.TButton", command=self.refresh)
@@ -332,7 +329,7 @@ class StellaSoraApp:
         tk.Label(tab, text="设置", background=PANEL, foreground=INK, font=("Microsoft YaHei UI", 16, "bold")).grid(
             row=0, column=0, columnspan=2, sticky="w"
         )
-        tk.Label(tab, text="管理本地归档、备份与软件资源", background=PANEL, foreground=MUTED, font=("Microsoft YaHei UI", 9)).grid(
+        tk.Label(tab, text="管理本地归档、备份与软件版本", background=PANEL, foreground=MUTED, font=("Microsoft YaHei UI", 9)).grid(
             row=1, column=0, columnspan=2, sticky="w", pady=(2, 18)
         )
 
@@ -354,10 +351,9 @@ class StellaSoraApp:
 
         tk.Label(data_panel, text="本地数据", background="#f4f8fb", foreground=INK, font=("Microsoft YaHei UI", 12, "bold")).pack(anchor="w", padx=16, pady=(16, 4))
         tk.Label(data_panel, textvariable=self.settings_summary, background="#f4f8fb", foreground=MUTED, justify="left", anchor="w", wraplength=400).pack(fill="x", padx=16, pady=(0, 14))
-        tk.Label(data_panel, text="资源与软件更新", background="#f4f8fb", foreground=INK, font=("Microsoft YaHei UI", 10, "bold")).pack(anchor="w", padx=16, pady=(4, 6))
+        tk.Label(data_panel, text="软件更新", background="#f4f8fb", foreground=INK, font=("Microsoft YaHei UI", 10, "bold")).pack(anchor="w", padx=16, pady=(4, 6))
         settings_actions = tk.Frame(data_panel, background="#f4f8fb")
         settings_actions.pack(anchor="w", padx=16, pady=(0, 16))
-        ttk.Button(settings_actions, text="更新角色资源", command=self.update_resources).pack(side="left", padx=(0, 8))
         ttk.Button(settings_actions, text="检查软件更新", command=self.check_app_update).pack(side="left")
 
     def _build_help_tab(self) -> None:
@@ -404,7 +400,7 @@ class StellaSoraApp:
         heading("使用方法")
         paragraph("1. 登录游戏并进入主界面，在游戏内依次打开旅人限时、秘纹限时、旅人常驻、秘纹常驻四类招募记录，等待每个记录列表显示。")
         paragraph("2. 回到本工具点击“刷新游戏数据”。读取完成后，五星一览和招募记录会自动更新；读取失败时可尝试以管理员身份运行。")
-        paragraph("3. 新角色头像缺失时点击“更新角色资源”；软件版本可通过“检查更新”进行升级。")
+        paragraph("3. 新角色和秘纹图片会随软件版本内置更新；软件版本可通过“检查更新”进行升级。")
 
         heading("数据与备份")
         paragraph("每次刷新都会合并更新 exports/stellasora_gacha_archive.json。官方记录可能只保留最近半年，请定期备份该文件。")
@@ -891,29 +887,6 @@ class StellaSoraApp:
 
         threading.Thread(target=work, name="stellasora-reader", daemon=True).start()
 
-    def update_resources(self) -> None:
-        if self.busy:
-            return
-        self.busy = True
-        self.refresh_button.state(["disabled"])
-        self.resource_button.state(["disabled"])
-        self.progress.grid()
-        self.progress.start(12)
-        self.status_var.set("正在检查角色资源")
-
-        def work() -> None:
-            try:
-                items, downloaded = update_resources(
-                    DEFAULT_MANIFEST_URL,
-                    self.output_dir / "assets",
-                    progress=lambda message: self.events.put(("progress", message)),
-                )
-                self.events.put(("resources_complete", (items, downloaded)))
-            except Exception as error:
-                self.events.put(("resources_error", error))
-
-        threading.Thread(target=work, name="stellasora-resources", daemon=True).start()
-
     def check_app_update(self, silent: bool = False) -> None:
         if self.busy or self.update_checking:
             return
@@ -938,7 +911,6 @@ class StellaSoraApp:
     def _download_app_update(self, update: AppUpdate) -> None:
         self.busy = True
         self.refresh_button.state(["disabled"])
-        self.resource_button.state(["disabled"])
         self.update_button.state(["disabled"])
         self.progress.grid()
         self.progress.start(12)
@@ -975,26 +947,6 @@ class StellaSoraApp:
                     self._finish_busy()
                     self.status_var.set("读取失败")
                     messagebox.showerror("读取失败", str(payload), parent=self.root)
-                elif event == "resources_complete":
-                    items, downloaded = payload
-                    for item in items:
-                        try:
-                            register_gacha_resource(
-                                int(item["id"]),
-                                str(item["kind"]),
-                                str(item["name"]),
-                                int(item.get("rarity", 5)),
-                            )
-                        except (KeyError, TypeError, ValueError):
-                            continue
-                    self._finish_busy()
-                    if self.snapshot is not None:
-                        self._fill_five_star_stats()
-                    self.status_var.set(f"角色资源更新完成 · 新增 {downloaded} 个")
-                elif event == "resources_error":
-                    self._finish_busy()
-                    self.status_var.set("角色资源更新失败")
-                    messagebox.showerror("资源更新失败", str(payload), parent=self.root)
                 elif event == "app_update_result":
                     update, silent = payload
                     self.update_checking = False
@@ -1047,7 +999,6 @@ class StellaSoraApp:
         self.progress.stop()
         self.progress.grid_remove()
         self.refresh_button.state(["!disabled"])
-        self.resource_button.state(["!disabled"])
 
     def _apply_snapshot(self, snapshot: Snapshot) -> None:
         self.snapshot = snapshot

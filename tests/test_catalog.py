@@ -24,6 +24,7 @@ class CatalogTests(unittest.TestCase):
     def test_disc_ids_resolve_to_catalog_names(self):
         self.assertEqual(gacha_item_name(211002), "和煦")
         self.assertEqual(gacha_item_name(213026), "清扫时间DA♥YO")
+        self.assertEqual(gacha_item_name(214057), "伴我航行")
 
     def test_registers_downloaded_five_star_disc(self):
         item_id = 299999
