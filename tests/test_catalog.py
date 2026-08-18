@@ -16,6 +16,7 @@ class CatalogTests(unittest.TestCase):
     def test_known_traveler_name(self):
         self.assertEqual(traveler_name(142), "珂赛特")
         self.assertEqual(gacha_item_name(142), "珂赛特")
+        self.assertEqual(gacha_item_name(157), "花铃")
 
     def test_unknown_item_stays_identifiable(self):
         self.assertEqual(gacha_item_name(999999), "物品 #999999")

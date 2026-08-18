@@ -59,7 +59,7 @@ HEADER = "#607d98"
 POOL_COLORS = ("#7776aa", "#4d9ba0", "#5d82a9", "#8e6d9c")
 FIVE_STAR_AVATAR_SIZE = 70
 FIVE_STAR_TILE_IMAGE_SIZE = 78
-APP_VERSION = "1.2.11"
+APP_VERSION = "1.2.12"
 GACHA_CATEGORY_ORDER = (
     CATEGORY_TRAVELER_LIMITED,
     CATEGORY_DISC_LIMITED,
@@ -93,6 +93,7 @@ OFFICIAL_LIMITED_POOL_INFO = {
     20160: ("波光荡漾，轻触的指尖", "2026-07-21", "2026-08-11", "浮光掠影"),
     11133: ("摇曳轻风纯情香", "2026-08-04", "2026-08-25", "夏花"),
     21133: ("午后微光、共入翠梦", "2026-08-04", "2026-08-25", "鹿鸣"),
+    10157: ("追晴逐日的花漫波", "2026-08-18", "2026-09-08", "花铃"),
 }
 
 

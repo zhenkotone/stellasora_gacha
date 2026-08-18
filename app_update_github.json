@@ -1,6 +1,6 @@
 {
-  "version": "1.2.11",
-  "url": "https://github.com/zhenkotone/stellasora_gacha/releases/download/v1.2.11/StellaSoraGachaTool-Portable-1.2.11.zip",
-  "sha256": "bf07d217d77275ee60481c980d4de6bec29f2db5c5db8f90820b498ddad1c213",
-  "notes": "修复新卡池和新限时角色未显示：兼容未来五星 ID，未知角色显示编号占位。"
+  "version": "1.2.12",
+  "url": "https://github.com/zhenkotone/stellasora_gacha/releases/download/v1.2.12/StellaSoraGachaTool-Portable-1.2.12.zip",
+  "sha256": "01276abccc52a1b176ed0caecd5c01195a28c2c80c78f6b1ea723792d3fdfc6b",
+  "notes": "加入最新5星旅人花铃（ID 157）及限时卡池 10157，修复花铃记录不显示。"
 }
