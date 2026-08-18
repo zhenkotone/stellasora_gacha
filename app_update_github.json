@@ -1,6 +1,6 @@
 {
-  "version": "1.2.13",
-  "url": "https://github.com/zhenkotone/stellasora_gacha/releases/download/v1.2.13/StellaSoraGachaTool-Portable-1.2.13.zip",
-  "sha256": "f978f104c3186552a0f2ec23611eb3c500bc8738cf8d1f9bad049dbac3763f75",
-  "notes": "角色与秘纹资源改为随软件版本内置，移除独立资源更新功能。"
+  "version": "1.2.14",
+  "url": "https://github.com/zhenkotone/stellasora_gacha/releases/download/v1.2.14/StellaSoraGachaTool-Portable-1.2.14.zip",
+  "sha256": "3e955bfd2cf21232c9c06d6b7b7278cf95f7aac2fe6dc5c4f1c6e718e07828c1",
+  "notes": "修正秘纹 214057 的内置图片资源。"
 }
