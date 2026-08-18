@@ -57,7 +57,7 @@ HEADER = "#607d98"
 POOL_COLORS = ("#7776aa", "#4d9ba0", "#5d82a9", "#8e6d9c")
 FIVE_STAR_AVATAR_SIZE = 70
 FIVE_STAR_TILE_IMAGE_SIZE = 78
-APP_VERSION = "1.2.14"
+APP_VERSION = "1.2.15"
 GACHA_CATEGORY_ORDER = (
     CATEGORY_TRAVELER_LIMITED,
     CATEGORY_DISC_LIMITED,
@@ -438,7 +438,7 @@ class StellaSoraApp:
             return
         semantic_categories = self._semantic_gacha_categories()
         stats_by_category = {
-            category: build_category_stat(semantic_categories.get(category, []))
+            category: build_category_stat(semantic_categories.get(category, []), is_up=self._is_up_item)
             for category in GACHA_CATEGORY_ORDER
         }
         total_five = sum(len(stat.five_stars) for stat in stats_by_category.values() if stat is not None)
@@ -762,6 +762,19 @@ class StellaSoraApp:
         )
         return round(pool.total_pulls / up_count) if up_count else None
 
+    @classmethod
+    def _is_up_item(cls, gid: int, item_id: int) -> bool:
+        """Return whether a five-star belongs to the official UP on its banner.
+
+        Standard pools have no single UP target, so their five-stars retain the
+        historical reset behavior. Limited pools reset pity only on the named
+        UP item; an off-banner five-star (歪) leaves pity running.
+        """
+        official_pool = OFFICIAL_LIMITED_POOL_INFO.get(gid)
+        if official_pool is None:
+            return True
+        return cls._same_item_name(gacha_item_name(item_id), official_pool[3])
+
     @staticmethod
     def _darken(color: str) -> str:
         red, green, blue = (int(color[index : index + 2], 16) for index in (1, 3, 5))
@@ -1004,7 +1017,7 @@ class StellaSoraApp:
         self.snapshot = snapshot
         semantic_categories = self._semantic_gacha_categories()
         category_stats = {
-            category: build_category_stat(semantic_categories.get(category, []))
+            category: build_category_stat(semantic_categories.get(category, []), is_up=self._is_up_item)
             for category in GACHA_CATEGORY_ORDER
         }
         loaded_categories = sum(category in semantic_categories for category in GACHA_CATEGORY_ORDER)
@@ -1081,13 +1094,17 @@ class StellaSoraApp:
         selected = self.gacha_category_filter.get()
         filters = [("all", "全部卡池", None)]
         filters.extend(
-            (category, GACHA_CATEGORY_NAMES[category], build_category_stat(semantic_categories.get(category, [])))
+            (category, GACHA_CATEGORY_NAMES[category], build_category_stat(semantic_categories.get(category, []), is_up=self._is_up_item))
             for category in GACHA_CATEGORY_ORDER
         )
         for category, name, stat in filters:
             active = selected == category
             if category == "all":
-                five_stars = sum(len(pool.five_stars) for groups in semantic_categories.values() for pool in build_banner_stats_with_shared_pity(groups))
+                five_stars = sum(
+                    len(pool.five_stars)
+                    for groups in semantic_categories.values()
+                    for pool in build_banner_stats_with_shared_pity(groups, is_up=self._is_up_item)
+                )
                 detail = f"{five_stars} 个五星记录"
             elif stat is None:
                 detail = "尚未加载"
@@ -1132,7 +1149,7 @@ class StellaSoraApp:
             groups = semantic_categories.get(category, [])
             if not groups:
                 continue
-            pools = build_banner_stats_with_shared_pity(groups)
+            pools = build_banner_stats_with_shared_pity(groups, is_up=self._is_up_item)
             pools_with_five_stars = [pool for pool in pools if pool.five_stars]
             if not pools_with_five_stars:
                 continue

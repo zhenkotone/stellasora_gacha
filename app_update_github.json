@@ -1,6 +1,6 @@
 {
-  "version": "1.2.14",
-  "url": "https://github.com/zhenkotone/stellasora_gacha/releases/download/v1.2.14/StellaSoraGachaTool-Portable-1.2.14.zip",
-  "sha256": "3e955bfd2cf21232c9c06d6b7b7278cf95f7aac2fe6dc5c4f1c6e718e07828c1",
-  "notes": "修正秘纹 214057 的内置图片资源。"
+  "version": "1.2.15",
+  "url": "https://github.com/zhenkotone/stellasora_gacha/releases/download/v1.2.15/StellaSoraGachaTool-Portable-1.2.15.zip",
+  "sha256": "b63d747185faa877a1afe6d97cb8487b62468e8e7afe7a81a34a39bdc9b3bc85",
+  "notes": "修复限时池歪的五星不会重置垫抽，只有 UP 五星会重置。"
 }

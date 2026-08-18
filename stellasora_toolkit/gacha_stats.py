@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from collections.abc import Callable
 from typing import Any
 
 from .catalog import gacha_item_kind, gacha_item_name, is_five_star_item
@@ -118,7 +119,11 @@ def build_pool_stats(groups: list[dict[str, Any]]) -> list[PoolStats]:
     return pools
 
 
-def build_banner_stats_with_shared_pity(groups: list[dict[str, Any]]) -> list[PoolStats]:
+def build_banner_stats_with_shared_pity(
+    groups: list[dict[str, Any]],
+    *,
+    is_up: Callable[[int, int], bool] | None = None,
+) -> list[PoolStats]:
     """Split banners by GID while carrying five-star pity across the category."""
     ordered = sorted(groups, key=lambda item: (int(item.get("Time") or 0), int(item.get("Gid") or 0)))
     banner_totals: dict[int, int] = {}
@@ -156,7 +161,8 @@ def build_banner_stats_with_shared_pity(groups: list[dict[str, Any]]) -> list[Po
                     gid=gid,
                 )
             )
-            since_last_five = 0
+            if is_up is None or is_up(gid, item_id):
+                since_last_five = 0
 
     pools = [
         PoolStats(
@@ -172,7 +178,11 @@ def build_banner_stats_with_shared_pity(groups: list[dict[str, Any]]) -> list[Po
     return pools
 
 
-def build_category_stat(groups: list[dict[str, Any]]) -> PoolStats | None:
+def build_category_stat(
+    groups: list[dict[str, Any]],
+    *,
+    is_up: Callable[[int, int], bool] | None = None,
+) -> PoolStats | None:
     """Merge all banner IDs belonging to one official history category."""
     if not groups:
         return None
@@ -209,6 +219,7 @@ def build_category_stat(groups: list[dict[str, Any]]) -> PoolStats | None:
                     gid=gid,
                 )
             )
-            since_last_five = 0
+            if is_up is None or is_up(gid, item_id):
+                since_last_five = 0
     # Pity is calculated chronologically; the UI presents newest results first.
     return PoolStats(0, total, min(times, default=0), max(times, default=0), tuple(reversed(hits)))

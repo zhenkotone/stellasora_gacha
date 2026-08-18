@@ -57,6 +57,16 @@ class GachaStatsTests(unittest.TestCase):
         self.assertEqual([hit.gid for hit in stat.five_stars], [10120, 10110])
         self.assertEqual(stat.current_pity, 1)
 
+    def test_limited_pity_resets_only_on_up_not_off_banner(self):
+        stat = build_category_stat(
+            [{"Gid": 10110, "Time": 100, "Ids": [1, 2, 110, 3, 4, 160]}],
+            is_up=lambda _gid, item_id: item_id == 160,
+        )
+        self.assertIsNotNone(stat)
+        self.assertEqual([hit.item_id for hit in stat.five_stars], [160, 110])
+        self.assertEqual([hit.pity for hit in stat.five_stars], [6, 3])
+        self.assertEqual(stat.current_pity, 0)
+
     def test_banner_stats_keep_limited_pity_between_banner_ids(self):
         pools = {pool.gid: pool for pool in build_banner_stats_with_shared_pity([
             {"Gid": 10110, "Time": 100, "Ids": [1, 2, 110, 3, 4]},
