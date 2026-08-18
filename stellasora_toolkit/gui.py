@@ -57,7 +57,7 @@ HEADER = "#607d98"
 POOL_COLORS = ("#7776aa", "#4d9ba0", "#5d82a9", "#8e6d9c")
 FIVE_STAR_AVATAR_SIZE = 70
 FIVE_STAR_TILE_IMAGE_SIZE = 78
-APP_VERSION = "1.2.15"
+APP_VERSION = "1.2.14"
 GACHA_CATEGORY_ORDER = (
     CATEGORY_TRAVELER_LIMITED,
     CATEGORY_DISC_LIMITED,
@@ -778,8 +778,7 @@ class StellaSoraApp:
         folder = "travelers" if kind == "traveler" else "discs"
         resource_root = Path(getattr(sys, "_MEIPASS", Path(__file__).resolve().parent.parent))
         external_path = self.output_dir / "assets" / folder / f"{item_id}.png"
-        bundled_path = resource_root / "assets" / folder / f"{item_id}.png"
-        path = bundled_path if bundled_path.exists() else external_path
+        path = external_path if external_path.exists() else resource_root / "assets" / folder / f"{item_id}.png"
         size = FIVE_STAR_AVATAR_SIZE
         try:
             source = Image.open(path).convert("RGBA")
@@ -808,8 +807,7 @@ class StellaSoraApp:
         folder = "travelers" if kind == "traveler" else "discs"
         resource_root = Path(getattr(sys, "_MEIPASS", Path(__file__).resolve().parent.parent))
         external_path = self.output_dir / "assets" / folder / f"{item_id}.png"
-        bundled_path = resource_root / "assets" / folder / f"{item_id}.png"
-        path = bundled_path if bundled_path.exists() else external_path
+        path = external_path if external_path.exists() else resource_root / "assets" / folder / f"{item_id}.png"
         try:
             source = Image.open(path).convert("RGBA")
             source = ImageOps.fit(source, (size - 4, size - 4), method=Image.Resampling.LANCZOS)
