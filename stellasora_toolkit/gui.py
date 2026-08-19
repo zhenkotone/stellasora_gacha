@@ -57,7 +57,7 @@ HEADER = "#607d98"
 POOL_COLORS = ("#7776aa", "#4d9ba0", "#5d82a9", "#8e6d9c")
 FIVE_STAR_AVATAR_SIZE = 70
 FIVE_STAR_TILE_IMAGE_SIZE = 78
-APP_VERSION = "1.2.16"
+APP_VERSION = "1.2.17"
 GACHA_CATEGORY_ORDER = (
     CATEGORY_TRAVELER_LIMITED,
     CATEGORY_DISC_LIMITED,
@@ -93,6 +93,50 @@ OFFICIAL_LIMITED_POOL_INFO = {
     11133: ("摇曳轻风纯情香", "2026-08-04", "2026-08-25", "夏花"),
     21133: ("午后微光、共入翠梦", "2026-08-04", "2026-08-25", "鹿鸣"),
     10157: ("追晴逐日的花漫波", "2026-08-18", "2026-09-08", "花铃"),
+    # Official limited-banner UP data sourced from Stella Sora announcements/API.
+    10110: ("辉映碧玉的理型", "2026-01-13", "2026-02-03", "翡冷翠"),
+    10114: ("喵次元的狙击手", "2026-06-30", "2026-07-21", "猫眼"),
+    10119: ("命定奇遇", "2025-11-11", "2025-12-02", "花原"),
+    10125: ("命定奇遇", "2025-12-30", "2026-01-20", "苍兰"),
+    10132: ("命定奇遇", "2026-03-10", "2026-03-31", "密涅瓦"),
+    10133: ("摇曳轻风纯情香", "2025-12-09", "2025-12-30", "夏花"),
+    10134: ("雪融时分新芽绽", "2025-11-18", "2025-12-09", "冬香"),
+    10135: ("命定奇遇", "2026-01-27", "2026-02-17", "雾语"),
+    10141: ("命定奇遇", "2026-02-17", "2026-03-10", "赤霞"),
+    10144: ("夜月倾流，闪烁刀影里", "2025-10-20", "2025-11-11", "千都世"),
+    10149: ("命定奇遇", "2025-12-02", "2025-12-23", "格芮"),
+    10155: ("直抵圆月的超巨浪", "2025-10-28", "2025-11-18", "希娅"),
+    10156: ("命定奇遇", "2026-03-31", "2026-04-21", "小禾"),
+    10158: ("圣夜送礼大作战！", "2025-12-23", "2026-01-13", "菈露（圣夜）"),
+    10159: ("点滴心语，余温尚存时", "2026-02-03", "2026-02-24", "科洛妮丝（新春）"),
+    11119: ("命定奇遇", "2026-06-16", "2026-07-07", "花原"),
+    11134: ("雪融时分新芽绽", "2026-09-01", "2026-09-22", "冬香"),
+    11141: ("命定奇遇", "2026-07-14", "2026-08-04", "赤霞"),
+    11144: ("夜月倾流，闪烁刀影里", "2026-04-30", "2026-05-19", "千都世"),
+    11155: ("直抵圆月的超巨浪", "2026-05-26", "2026-06-16", "希娅"),
+    20110: ("微醺茶香，藤花幽梦", "2026-01-13", "2026-02-03", "仙踪良梦"),
+    20114: ("我已喵准你的心", "2026-06-30", "2026-07-21", "猫之珍藏"),
+    20115: ("若能触及那片繁星", "2026-05-14", "2026-06-02", "星之所向"),
+    20119: ("心弦定音", "2025-11-11", "2025-12-02", "白日花园"),
+    20125: ("心弦定音", "2025-12-30", "2026-01-20", "晴之花"),
+    20130: ("随愿启航的幸福气球", "2026-03-17", "2026-04-07", "飞越青空"),
+    20132: ("心弦定音", "2026-03-10", "2026-03-31", "午夜，堕天使"),
+    20133: ("午后微光、共入翠梦", "2025-12-09", "2025-12-30", "鹿鸣"),
+    20134: ("绚丽夜空、烟花绽放", "2025-11-18", "2025-12-09", "花火"),
+    20135: ("心弦定音", "2026-01-27", "2026-02-17", "魔女的秋千"),
+    20140: ("奇思妙想，寄于手作", "2026-06-02", "2026-06-23", "微小的乐园"),
+    20141: ("心弦定音", "2026-02-17", "2026-03-10", "龙飞凤舞"),
+    20144: ("浮月倒映清潭上", "2025-10-20", "2025-11-11", "潋滟故池水"),
+    20149: ("心弦定音", "2025-12-02", "2025-12-23", "迷途的朝圣者"),
+    20155: ("海天共一色", "2025-10-28", "2025-11-18", "波光漫游"),
+    20156: ("心弦定音", "2026-03-31", "2026-04-21", "抓住传说"),
+    20158: ("薯条之国的颂歌", "2025-12-23", "2026-01-13", "雪夜惊喜"),
+    20159: ("初醒眷恋 如梦之影", "2026-02-03", "2026-02-24", "罗帷春染岁朝新"),
+    21119: ("心弦定音", "2026-06-16", "2026-07-07", "白日花园"),
+    21134: ("绚丽夜空、烟花绽放", "2026-09-01", "2026-09-22", "花火"),
+    21141: ("心弦定音", "2026-07-14", "2026-08-04", "龙飞凤舞"),
+    21144: ("浮月倒映清潭上", "2026-04-30", "2026-05-19", "潋滟故池水"),
+    21155: ("海天共一色", "2026-05-26", "2026-06-16", "波光漫游"),
 }
 
 
@@ -438,11 +482,15 @@ class StellaSoraApp:
             return
         semantic_categories = self._semantic_gacha_categories()
         stats_by_category = {
+            category: build_category_stat(semantic_categories.get(category, []))
+            for category in GACHA_CATEGORY_ORDER
+        }
+        pity_stats_by_category = {
             category: build_category_stat(semantic_categories.get(category, []), is_up=self._is_up_item)
             for category in GACHA_CATEGORY_ORDER
         }
         total_five = sum(len(stat.five_stars) for stat in stats_by_category.values() if stat is not None)
-        self._build_home_summary(stats_by_category)
+        self._build_home_summary(pity_stats_by_category, recent_stats=stats_by_category)
 
         intro = ttk.Frame(self.stats_content, style="Panel.TFrame", padding=(14, 11))
         intro.pack(fill="x", padx=12, pady=(12, 8))
@@ -502,7 +550,13 @@ class StellaSoraApp:
             )
             color_index += 1
 
-    def _build_home_summary(self, stats_by_category: dict[str, PoolStats | None]) -> None:
+    def _build_home_summary(
+        self,
+        stats_by_category: dict[str, PoolStats | None],
+        *,
+        recent_stats: dict[str, PoolStats | None] | None = None,
+    ) -> None:
+        recent_stats = recent_stats or stats_by_category
         summary = ttk.Frame(self.stats_content, style="App.TFrame")
         summary.pack(fill="x", padx=12, pady=(12, 0))
         summary.columnconfigure(0, weight=3)
@@ -569,7 +623,7 @@ class StellaSoraApp:
             font=("Microsoft YaHei UI", 12, "bold"),
         ).pack(anchor="w", padx=16, pady=(14, 8))
         recent: list[tuple[int, str, Any]] = []
-        for category, stat in stats_by_category.items():
+        for category, stat in recent_stats.items():
             if stat is None:
                 continue
             recent.extend((pull.timestamp, category, pull) for pull in stat.five_stars)
@@ -1017,7 +1071,7 @@ class StellaSoraApp:
         self.snapshot = snapshot
         semantic_categories = self._semantic_gacha_categories()
         category_stats = {
-            category: build_category_stat(semantic_categories.get(category, []), is_up=self._is_up_item)
+            category: build_category_stat(semantic_categories.get(category, []))
             for category in GACHA_CATEGORY_ORDER
         }
         loaded_categories = sum(category in semantic_categories for category in GACHA_CATEGORY_ORDER)
@@ -1094,7 +1148,7 @@ class StellaSoraApp:
         selected = self.gacha_category_filter.get()
         filters = [("all", "全部卡池", None)]
         filters.extend(
-            (category, GACHA_CATEGORY_NAMES[category], build_category_stat(semantic_categories.get(category, []), is_up=self._is_up_item))
+            (category, GACHA_CATEGORY_NAMES[category], build_category_stat(semantic_categories.get(category, [])))
             for category in GACHA_CATEGORY_ORDER
         )
         for category, name, stat in filters:
@@ -1103,7 +1157,7 @@ class StellaSoraApp:
                 five_stars = sum(
                     len(pool.five_stars)
                     for groups in semantic_categories.values()
-                    for pool in build_banner_stats_with_shared_pity(groups, is_up=self._is_up_item)
+                    for pool in build_banner_stats_with_shared_pity(groups)
                 )
                 detail = f"{five_stars} 个五星记录"
             elif stat is None:
@@ -1149,7 +1203,7 @@ class StellaSoraApp:
             groups = semantic_categories.get(category, [])
             if not groups:
                 continue
-            pools = build_banner_stats_with_shared_pity(groups, is_up=self._is_up_item)
+            pools = build_banner_stats_with_shared_pity(groups)
             pools_with_five_stars = [pool for pool in pools if pool.five_stars]
             if not pools_with_five_stars:
                 continue
