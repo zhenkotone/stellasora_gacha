@@ -57,7 +57,7 @@ HEADER = "#607d98"
 POOL_COLORS = ("#7776aa", "#4d9ba0", "#5d82a9", "#8e6d9c")
 FIVE_STAR_AVATAR_SIZE = 70
 FIVE_STAR_TILE_IMAGE_SIZE = 78
-APP_VERSION = "1.2.17"
+APP_VERSION = "1.2.18"
 GACHA_CATEGORY_ORDER = (
     CATEGORY_TRAVELER_LIMITED,
     CATEGORY_DISC_LIMITED,
@@ -93,6 +93,8 @@ OFFICIAL_LIMITED_POOL_INFO = {
     11133: ("摇曳轻风纯情香", "2026-08-04", "2026-08-25", "夏花"),
     21133: ("午后微光、共入翠梦", "2026-08-04", "2026-08-25", "鹿鸣"),
     10157: ("追晴逐日的花漫波", "2026-08-18", "2026-09-08", "花铃"),
+    10137: ("优雅起舞 千金驾到", "2026-09-08", "2026-09-29", "埃莉诺"),
+    20137: ("飞向梦寐以求的世界", "2026-09-08", "2026-09-29", "飞吧，笼中鸟"),
     # Official limited-banner UP data sourced from Stella Sora announcements/API.
     10110: ("辉映碧玉的理型", "2026-01-13", "2026-02-03", "翡冷翠"),
     10114: ("喵次元的狙击手", "2026-06-30", "2026-07-21", "猫眼"),
