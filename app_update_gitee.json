@@ -1,6 +1,6 @@
 {
-  "version": "1.2.19",
-  "url": "https://gitee.com/zhen-z/stellasora_gacha/releases/download/v1.2.19/StellaSoraGachaTool-Portable-1.2.19.zip",
-  "sha256": "934462717d4a2486aaa04c78a317463aa7692b144e2d129fc132bf915141e701",
-  "notes": "加入艾蕾与睡前童话新卡池（9月29日），补充翡冷翠与仙踪良梦复刻池（10月6日），内置新图片及 UP 信息。"
+  "version": "1.2.20",
+  "url": "https://gitee.com/zhen-z/stellasora_gacha/releases/download/v1.2.20/StellaSoraGachaTool-Portable-1.2.20.zip",
+  "sha256": "38b164aea31869bc64637fd75859ccf85bb6ca404fac9afe2a8270d317bbfb74",
+  "notes": "新增游戏 UID 归档与上传抽卡记录到蕾姆；首次成功上传提示按 UID 保存在本地，重启后不再重复弹出，设置中可复制绑定指令。"
 }
