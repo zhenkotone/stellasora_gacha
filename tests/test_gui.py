@@ -1,10 +1,24 @@
 import unittest
+from unittest.mock import Mock, patch
 
 from stellasora_toolkit.gacha_stats import FiveStarPull, PoolStats
 from stellasora_toolkit.gui import StellaSoraApp
+from stellasora_toolkit.upload import UploadResult
 
 
 class GuiTests(unittest.TestCase):
+    def test_binding_popup_only_depends_on_local_first_success(self):
+        app = StellaSoraApp.__new__(StellaSoraApp)
+        app.root = Mock()
+        app.status_var = Mock()
+        app._finish_busy = Mock()
+        for first in (True, False):
+            for replaced in (True, False):
+                result = UploadResult(201, {"ok": True, "replaced": replaced, "bindCommand": "test command"})
+                with self.subTest(first=first, replaced=replaced), patch("stellasora_toolkit.gui.messagebox.showinfo") as show:
+                    app._handle_upload_complete((result, "123456789", first, None))
+                    self.assertEqual(show.call_count, int(first))
+
     def test_up_name_comparison_normalizes_parentheses_and_spaces(self):
         self.assertTrue(StellaSoraApp._same_item_name("薇洛（盛夏）", "薇洛(盛夏)"))
         self.assertFalse(StellaSoraApp._same_item_name("归途", "鹿鸣"))

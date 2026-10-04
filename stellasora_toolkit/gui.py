@@ -31,7 +31,8 @@ from .catalog import (
     table_values,
     traveler_name,
 )
-from .service import ARCHIVE_FILENAME, Snapshot, extract_snapshot, load_latest_snapshot
+from .service import LEGACY_ARCHIVE_FILENAME, Snapshot, archive_path_for_uid, extract_snapshot, load_latest_snapshot
+from .upload import mark_upload_success, upload_archive
 from .gacha_stats import (
     CATEGORY_DISC_LIMITED,
     CATEGORY_DISC_STANDARD,
@@ -57,7 +58,7 @@ HEADER = "#607d98"
 POOL_COLORS = ("#7776aa", "#4d9ba0", "#5d82a9", "#8e6d9c")
 FIVE_STAR_AVATAR_SIZE = 70
 FIVE_STAR_TILE_IMAGE_SIZE = 78
-APP_VERSION = "1.2.19"
+APP_VERSION = "1.2.20"
 GACHA_CATEGORY_ORDER = (
     CATEGORY_TRAVELER_LIMITED,
     CATEGORY_DISC_LIMITED,
@@ -161,6 +162,7 @@ class StellaSoraApp:
         self.gacha_page = 1
         self.gacha_grid_columns = 0
         self.busy = False
+        self.uploading = False
         self.update_checking = False
 
         self.root.title("星塔旅人数据工具")
@@ -247,16 +249,19 @@ class StellaSoraApp:
         title_box = ttk.Frame(header, style="Header.TFrame")
         title_box.grid(row=0, column=0, sticky="w")
         ttk.Label(title_box, text="星塔旅人数据工具", style="Header.TLabel").pack(anchor="w")
-        ttk.Label(title_box, text="四类卡池与五星记录", style="HeaderSub.TLabel").pack(anchor="w", pady=(2, 0))
+        self.account_label = tk.StringVar(value="四类卡池与五星记录")
+        ttk.Label(title_box, textvariable=self.account_label, style="HeaderSub.TLabel").pack(anchor="w", pady=(2, 0))
         ttk.Label(header, text=f"当前版本 v{APP_VERSION}", style="HeaderSub.TLabel").grid(
             row=0, column=1, sticky="e", padx=(16, 18)
         )
         actions = ttk.Frame(header, style="Header.TFrame")
-        actions.grid(row=0, column=2, sticky="e")
+        actions.grid(row=1, column=0, columnspan=2, sticky="e", pady=(12, 0))
         self.open_button = ttk.Button(actions, text="打开导出目录", command=self._open_exports)
         self.open_button.pack(side="left", padx=(0, 8))
         self.update_button = ttk.Button(actions, text="检查更新", command=self.check_app_update)
         self.update_button.pack(side="left", padx=(0, 8))
+        self.upload_button = ttk.Button(actions, text="上传抽卡记录到蕾姆", command=self.upload_to_rem)
+        self.upload_button.pack(side="left", padx=(0, 8))
         self.refresh_button = ttk.Button(actions, text="刷新游戏数据", style="Accent.TButton", command=self.refresh)
         self.refresh_button.pack(side="left")
 
@@ -387,7 +392,7 @@ class StellaSoraApp:
         archive_panel.grid(row=2, column=0, sticky="nsew", padx=(0, 8))
         data_panel = tk.Frame(tab, background="#f4f8fb", highlightbackground=LINE, highlightthickness=1)
         data_panel.grid(row=2, column=1, sticky="nsew", padx=(8, 0))
-        self.settings_archive_path = tk.StringVar(value=str(self.output_dir / ARCHIVE_FILENAME))
+        self.settings_archive_path = tk.StringVar(value=str(self.output_dir / "UID.json"))
         self.settings_summary = tk.StringVar(value="尚未加载本地归档")
 
         tk.Label(archive_panel, text="本地归档", background="#f4f8fb", foreground=INK, font=("Microsoft YaHei UI", 12, "bold")).pack(anchor="w", padx=16, pady=(16, 4))
@@ -398,6 +403,8 @@ class StellaSoraApp:
         ttk.Button(actions, text="打开目录", command=self._open_exports).pack(side="left", padx=(0, 8))
         ttk.Button(actions, text="复制路径", command=self._copy_archive_path).pack(side="left", padx=(0, 8))
         ttk.Button(actions, text="创建备份", style="Accent.TButton", command=self._backup_archive).pack(side="left")
+        self.copy_bind_button = ttk.Button(archive_panel, text="复制蕾姆绑定指令", command=self._copy_bind_command, state="disabled")
+        self.copy_bind_button.pack(anchor="w", padx=16, pady=(0, 16))
 
         tk.Label(data_panel, text="本地数据", background="#f4f8fb", foreground=INK, font=("Microsoft YaHei UI", 12, "bold")).pack(anchor="w", padx=16, pady=(16, 4))
         tk.Label(data_panel, textvariable=self.settings_summary, background="#f4f8fb", foreground=MUTED, justify="left", anchor="w", wraplength=400).pack(fill="x", padx=16, pady=(0, 14))
@@ -453,8 +460,9 @@ class StellaSoraApp:
         paragraph("3. 新角色和秘纹图片会随软件版本内置更新；软件版本可通过“检查更新”进行升级。")
 
         heading("数据与备份")
-        paragraph("每次刷新都会合并更新 exports/stellasora_gacha_archive.json。官方记录可能只保留最近半年，请定期备份该文件。")
-        paragraph("导出的 JSON/CSV 不包含进程地址、账号 ID、Cookie、SDK token 或网络会话数据。请勿公开分享可能关联个人游戏行为的归档。")
+        paragraph("每次刷新都会合并更新 exports/UID.json，其中 UID 是当前游戏账号的数字标识。官方记录可能只保留最近半年，请定期备份该文件。")
+        paragraph("点击“上传抽卡记录到蕾姆”会上传完整 UID.json。同一 UID 在本地首次上传成功时弹出绑定指令，之后不再弹出；设置中始终可以复制指令。现有接口每次上传后仍需向蕾姆发送该指令确认更新，上传成功不代表正式记录已经更新。")
+        paragraph("归档包含游戏 UID 和抽卡记录，不包含密码、Cookie、SDK token、进程地址或网络会话数据。上传仅在点击上传按钮后进行，请勿公开分享归档。")
 
         heading("风险与免责声明", warning=True)
         paragraph("• 本项目是非官方个人研究工具，与游戏运营方、开发方不存在关联，也未获得官方认可或授权。")
@@ -935,15 +943,19 @@ class StellaSoraApp:
         snapshot = load_latest_snapshot(self.output_dir)
         if snapshot is None:
             self.status_var.set("暂无本地数据，请启动并登录游戏后刷新")
+            self._set_upload_button_state()
             return
         self._apply_snapshot(snapshot)
         self.status_var.set("已加载最近一次本地数据")
+        self._set_upload_button_state()
 
     def refresh(self) -> None:
-        if self.busy:
+        if self.busy or self.update_checking:
             return
         self.busy = True
         self.refresh_button.state(["disabled"])
+        self.upload_button.state(["disabled"])
+        self.update_button.state(["disabled"])
         self.progress.grid()
         self.progress.start(12)
         self.status_var.set("正在读取游戏数据")
@@ -959,6 +971,77 @@ class StellaSoraApp:
                 self.events.put(("error", error))
 
         threading.Thread(target=work, name="stellasora-reader", daemon=True).start()
+
+    def _archive_path(self) -> Path:
+        if self.snapshot is not None and self.snapshot.uid:
+            return archive_path_for_uid(self.output_dir, self.snapshot.uid)
+        return self.output_dir / LEGACY_ARCHIVE_FILENAME
+
+    def _set_upload_button_state(self) -> None:
+        if getattr(self, "upload_button", None) is None:
+            return
+        enabled = (
+            not self.busy
+            and self.snapshot is not None
+            and bool(self.snapshot.uid)
+            and self._archive_path().is_file()
+        )
+        self.upload_button.state(["!disabled"] if enabled else ["disabled"])
+
+    def upload_to_rem(self) -> None:
+        if self.busy or self.uploading or self.update_checking:
+            return
+        archive_path = self._archive_path()
+        uid = self.snapshot.uid if self.snapshot is not None else None
+        if not uid or not archive_path.is_file():
+            messagebox.showinfo("上传抽卡记录", "尚未找到 UID.json，请先刷新游戏数据。", parent=self.root)
+            return
+        self.busy = True
+        self.uploading = True
+        self.refresh_button.state(["disabled"])
+        self.upload_button.state(["disabled"])
+        self.update_button.state(["disabled"])
+        self.progress.grid()
+        self.progress.start(12)
+        self.status_var.set("正在上传抽卡记录到蕾姆")
+
+        def work() -> None:
+            try:
+                result = upload_archive(archive_path, uid)
+                state_error = None
+                try:
+                    first_upload = mark_upload_success(self.output_dir, uid)
+                except (OSError, ValueError) as error:
+                    first_upload = True
+                    state_error = str(error)
+                self.events.put(("upload_complete", (result, uid, first_upload, state_error)))
+            except Exception as error:
+                self.events.put(("upload_error", error))
+
+        threading.Thread(target=work, name="stellasora-upload", daemon=True).start()
+
+    def _copy_bind_command(self) -> None:
+        if self.snapshot is not None and self.snapshot.uid:
+            self.root.clipboard_clear()
+            self.root.clipboard_append(f"星塔抽卡绑定 {self.snapshot.uid}")
+            self.status_var.set("蕾姆绑定指令已复制")
+
+    def _handle_upload_complete(self, payload: tuple) -> None:
+        result, uid, first_upload, state_error = payload
+        self._finish_busy()
+        self.status_var.set("抽卡记录上传成功，已暂存；请向蕾姆确认更新")
+        if first_upload:
+            command = result.bind_command or f"星塔抽卡绑定 {uid}"
+            messagebox.showinfo(
+                "首次上传成功",
+                "完整抽卡归档已暂存到蕾姆服务器。\n\n请发送以下指令给蕾姆：\n"
+                + command
+                + "\n\n可在设置中复制指令。同一 UID 后续上传不再弹出此提示。"
+                + "\n现有接口每次上传仍需发送该指令确认更新。",
+                parent=self.root,
+            )
+        if state_error:
+            self.status_var.set("上传已成功，但未能保存首次提示标记；下次可能再次提示")
 
     def check_app_update(self, silent: bool = False) -> None:
         if self.busy or self.update_checking:
@@ -985,6 +1068,7 @@ class StellaSoraApp:
         self.busy = True
         self.refresh_button.state(["disabled"])
         self.update_button.state(["disabled"])
+        self.upload_button.state(["disabled"])
         self.progress.grid()
         self.progress.start(12)
         self.status_var.set(f"正在下载软件更新 {update.version}")
@@ -1020,6 +1104,12 @@ class StellaSoraApp:
                     self._finish_busy()
                     self.status_var.set("读取失败")
                     messagebox.showerror("读取失败", str(payload), parent=self.root)
+                elif event == "upload_complete":
+                    self._handle_upload_complete(payload)
+                elif event == "upload_error":
+                    self._finish_busy()
+                    self.status_var.set("抽卡记录上传失败")
+                    messagebox.showerror("上传失败", str(payload), parent=self.root)
                 elif event == "app_update_result":
                     update, silent = payload
                     self.update_checking = False
@@ -1069,12 +1159,19 @@ class StellaSoraApp:
 
     def _finish_busy(self) -> None:
         self.busy = False
+        self.uploading = False
         self.progress.stop()
         self.progress.grid_remove()
         self.refresh_button.state(["!disabled"])
+        if not self.update_checking:
+            self.update_button.state(["!disabled"])
+        self._set_upload_button_state()
 
     def _apply_snapshot(self, snapshot: Snapshot) -> None:
         self.snapshot = snapshot
+        self.settings_archive_path.set(str(self._archive_path()))
+        self.account_label.set(f"UID: {snapshot.uid}" if snapshot.uid else "旧归档尚未关联游戏 UID")
+        self.copy_bind_button.state(["!disabled"] if snapshot.uid else ["disabled"])
         semantic_categories = self._semantic_gacha_categories()
         category_stats = {
             category: build_category_stat(semantic_categories.get(category, []))
@@ -1619,19 +1716,19 @@ class StellaSoraApp:
             subprocess.Popen(["xdg-open", str(self.output_dir)])
 
     def _copy_archive_path(self) -> None:
-        archive_path = str(self.output_dir / ARCHIVE_FILENAME)
+        archive_path = str(self._archive_path())
         self.root.clipboard_clear()
         self.root.clipboard_append(archive_path)
         self.status_var.set("归档路径已复制")
 
     def _backup_archive(self) -> None:
-        archive_path = self.output_dir / ARCHIVE_FILENAME
+        archive_path = self._archive_path()
         if not archive_path.exists():
             messagebox.showinfo("创建备份", "尚未找到本地招募归档，请先刷新游戏数据。", parent=self.root)
             return
         backup_dir = self.output_dir / "backups"
         backup_dir.mkdir(parents=True, exist_ok=True)
-        target = backup_dir / f"stellasora_gacha_archive_{datetime.now():%Y%m%d_%H%M%S}.json"
+        target = backup_dir / f"{archive_path.stem}_{datetime.now():%Y%m%d_%H%M%S_%f}.json"
         try:
             shutil.copy2(archive_path, target)
         except OSError as error:
