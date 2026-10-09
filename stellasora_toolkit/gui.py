@@ -33,11 +33,13 @@ from .catalog import (
 )
 from .service import LEGACY_ARCHIVE_FILENAME, Snapshot, archive_path_for_uid, extract_snapshot, load_latest_snapshot
 from .upload import mark_upload_success, upload_archive
+from .gacha_display import SparkReward, build_spark_rewards, insert_spark_rewards
 from .gacha_stats import (
     CATEGORY_DISC_LIMITED,
     CATEGORY_DISC_STANDARD,
     CATEGORY_TRAVELER_LIMITED,
     CATEGORY_TRAVELER_STANDARD,
+    FiveStarPull,
     PoolStats,
     build_category_stat,
     build_banner_stats_with_shared_pity,
@@ -58,7 +60,7 @@ HEADER = "#607d98"
 POOL_COLORS = ("#7776aa", "#4d9ba0", "#5d82a9", "#8e6d9c")
 FIVE_STAR_AVATAR_SIZE = 70
 FIVE_STAR_TILE_IMAGE_SIZE = 78
-APP_VERSION = "1.2.20"
+APP_VERSION = "1.2.21"
 GACHA_CATEGORY_ORDER = (
     CATEGORY_TRAVELER_LIMITED,
     CATEGORY_DISC_LIMITED,
@@ -503,6 +505,7 @@ class StellaSoraApp:
             category: build_category_stat(semantic_categories.get(category, []), is_up=self._is_up_item)
             for category in GACHA_CATEGORY_ORDER
         }
+        spark_rewards = build_spark_rewards(semantic_categories.get(CATEGORY_TRAVELER_LIMITED, []), OFFICIAL_LIMITED_POOL_INFO)
         total_five = sum(len(stat.five_stars) for stat in stats_by_category.values() if stat is not None)
         self._build_home_summary(pity_stats_by_category, recent_stats=stats_by_category)
 
@@ -561,6 +564,8 @@ class StellaSoraApp:
                 name,
                 panel,
                 category=category,
+                display_entries=insert_spark_rewards(category_stat.five_stars, spark_rewards)
+                if category == CATEGORY_TRAVELER_LIMITED else category_stat.five_stars,
             )
             color_index += 1
 
@@ -706,6 +711,7 @@ class StellaSoraApp:
         parent: ttk.Frame | None = None,
         *,
         category: str,
+        display_entries: tuple[FiveStarPull | SparkReward, ...] | None = None,
     ) -> None:
         container = parent or self.stats_content
         section = ttk.Frame(container, style="Panel.TFrame")
@@ -747,7 +753,8 @@ class StellaSoraApp:
 
         hits = tk.Frame(section, background=PANEL)
         hits.pack(fill="x", padx=14, pady=(12, 14))
-        if not pool.five_stars:
+        entries = pool.five_stars if display_entries is None else display_entries
+        if not entries:
             tk.Label(
                 hits,
                 text="该卡池的已加载记录中暂无五星角色",
@@ -767,7 +774,7 @@ class StellaSoraApp:
             last_columns = columns
             for child in hits.winfo_children():
                 child.destroy()
-            for index, pull in enumerate(pool.five_stars):
+            for index, pull in enumerate(entries):
                 tile = tk.Frame(hits, background=PANEL, width=82, height=100)
                 tile.grid(row=index // columns, column=index % columns, padx=5, pady=5, sticky="nw")
                 tile.grid_propagate(False)
@@ -788,10 +795,11 @@ class StellaSoraApp:
                         padx=4,
                         pady=1,
                     ).place(x=78, y=2, anchor="ne")
-                badge_color = "#4d9ba0" if pull.pity <= 30 else WARM if pull.pity <= 60 else "#b97a8a"
+                is_spark = isinstance(pull, SparkReward)
+                badge_color = "#ad8138" if is_spark else "#4d9ba0" if pull.pity <= 30 else WARM if pull.pity <= 60 else "#b97a8a"
                 tk.Label(
                     tile,
-                    text=str(pull.pity),
+                    text="井" if is_spark else str(pull.pity),
                     background=badge_color,
                     foreground="#ffffff",
                     font=("Microsoft YaHei UI", 10, "bold"),
@@ -1307,13 +1315,14 @@ class StellaSoraApp:
             if not groups:
                 continue
             pools = build_banner_stats_with_shared_pity(groups)
-            pools_with_five_stars = [pool for pool in pools if pool.five_stars]
+            spark_rewards = build_spark_rewards(groups, OFFICIAL_LIMITED_POOL_INFO) if category == CATEGORY_TRAVELER_LIMITED else {}
+            pools_with_five_stars = [pool for pool in pools if pool.five_stars or pool.gid in spark_rewards]
             if not pools_with_five_stars:
                 continue
             self._add_gacha_category_heading(row, category, len(pools_with_five_stars))
             row += 1
             for pool in pools_with_five_stars:
-                self._add_five_star_banner_card(row, category, pool)
+                self._add_five_star_banner_card(row, category, pool, reward=spark_rewards.get(pool.gid))
                 row += 1
         if row:
             return
@@ -1344,7 +1353,7 @@ class StellaSoraApp:
             font=("Microsoft YaHei UI", 8),
         ).pack(side="right")
 
-    def _add_five_star_banner_card(self, row: int, category: str, pool: PoolStats) -> None:
+    def _add_five_star_banner_card(self, row: int, category: str, pool: PoolStats, *, reward: SparkReward | None = None) -> None:
         color = POOL_COLORS[GACHA_CATEGORY_ORDER.index(category)]
         official_pool = OFFICIAL_LIMITED_POOL_INFO.get(pool.gid)
         standard_pool_name = {
@@ -1392,7 +1401,8 @@ class StellaSoraApp:
         hits = tk.Frame(card, background="#f4f8fb")
         hits.grid(row=2, column=0, sticky="ew", padx=16, pady=(9, 12))
         hits.grid_columnconfigure(0, weight=1)
-        for index, pull in enumerate(pool.five_stars):
+        entries = insert_spark_rewards(pool.five_stars, {pool.gid: reward}) if reward is not None else pool.five_stars
+        for index, pull in enumerate(entries):
             item_row = tk.Frame(hits, background="#f4f8fb")
             item_row.grid(row=index, column=0, sticky="ew", pady=4)
             item_row.grid_columnconfigure(1, weight=1)
@@ -1420,23 +1430,26 @@ class StellaSoraApp:
                 event: tk.Event,
                 *,
                 canvas=progress,
-                pity=pull.pity,
+                entry=pull,
                 pity_limit=GACHA_CATEGORY_PITY_LIMITS[category],
             ) -> None:
-                available = max(160, min(720, event.width - 4))
-                canvas.delete("all")
-                width = self._pity_bar_width(pity, available, pity_limit)
-                canvas.create_rectangle(0, 3, width, 41, fill=self._pity_color(pity), outline="")
-                canvas.create_text(
-                    12,
-                    22,
-                    text=f"{pity} 抽",
-                    anchor="w",
-                    fill="#17212b",
-                    font=("Microsoft YaHei UI", 12, "bold"),
-                )
+                self._draw_history_progress(canvas, event.width, entry, pity_limit)
 
             progress.bind("<Configure>", draw_progress)
+
+    @classmethod
+    def _draw_history_progress(cls, canvas: tk.Canvas, available_width: int, entry: FiveStarPull | SparkReward, pity_limit: int) -> None:
+        available = max(160, min(720, available_width - 4))
+        canvas.delete("all")
+        is_spark = isinstance(entry, SparkReward)
+        width = 80 if is_spark else cls._pity_bar_width(entry.pity, available, pity_limit)
+        color = "#e7c65e" if is_spark else cls._pity_color(entry.pity)
+        canvas.create_rectangle(0, 3, width, 41, fill=color, outline="")
+        canvas.create_text(
+            12, 22,
+            text="井" if is_spark else f"{entry.pity} 抽",
+            anchor="w", fill="#17212b", font=("Microsoft YaHei UI", 12, "bold"),
+        )
 
     @staticmethod
     def _same_item_name(actual: str, expected: str) -> bool:
