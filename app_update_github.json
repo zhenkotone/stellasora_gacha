@@ -1,6 +1,6 @@
 {
-  "version": "1.2.20",
-  "url": "https://github.com/zhenkotone/stellasora_gacha/releases/download/v1.2.20/StellaSoraGachaTool-Portable-1.2.20.zip",
-  "sha256": "660424a5f1cf5364bd0192f820eae12d83502cb69cd6912b62f4d5886cc2a31c",
-  "notes": "新增游戏 UID 归档与上传抽卡记录到蕾姆；首次成功上传提示按 UID 保存在本地，重启后不再重复弹出，设置中可复制绑定指令。"
+  "version": "1.2.21",
+  "url": "https://github.com/zhenkotone/stellasora_gacha/releases/download/v1.2.21/StellaSoraGachaTool-Portable-1.2.21.zip",
+  "sha256": "9e432acca2b0baf5ca20368acd9620a62cbc730721c4b0b9ebe7dbf81a03f4cc",
+  "notes": "旅人限时池单期满120抽时，首页卡池详情和五星招募记录展示当期UP的井奖励；每期一个、换期清零，仅用于展示，不修改JSON或上传数据，不影响抽数、五星统计、垫抽和平均抽数。"
 }
